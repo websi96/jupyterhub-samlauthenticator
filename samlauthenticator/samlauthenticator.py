@@ -728,7 +728,7 @@ class SAMLAuthenticator(Authenticator):
 
         handler_self.log.debug(redirect_link_getter)
 
-        xml_content = self._make_sp_authnrequest(handler_self)
+        xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
         encoded_xml_content = base64.b64encode(zlib.compress(xml_content.encode())[2:-4])
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
@@ -777,10 +777,10 @@ class SAMLAuthenticator(Authenticator):
 
         return ''
 
-    def _make_sp_authnrequest(self, meta_handler_self):
+    def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
         authnrequest = '''
         <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" entityID="{{ entityId }}" ID="{{ entityId }}" 
-        Version="2.0" ProviderName="SP test" IssueInstant="2014-07-16T23:52:45Z" Destination="http://idp.example.com/SSOService.php" 
+        Version="2.0" ProviderName="{{ entityId }}" IssueInstant="2014-07-16T23:52:45Z" Destination="{{ redirect_link }}" 
         ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="{{ entityLocation }}">
             <saml:Issuer>http://sp.example.com/demo1/metadata.php</saml:Issuer>
             <samlp:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="true"/>
@@ -797,9 +797,10 @@ class SAMLAuthenticator(Authenticator):
                 entity_id + '/hub/login'
 
         xml_template = Template(authnrequest)
-        return xml_template.render(entityId=entity_id,
-                                   nameIdFormat=self.nameid_format,
-                                   entityLocation=acs_endpoint_url)
+        return xml_template.render( entityId=entity_id,
+                                    redirect_link=redirect_link,
+                                    nameIdFormat=self.nameid_format,
+                                    entityLocation=acs_endpoint_url)
 
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
