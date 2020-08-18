@@ -775,7 +775,7 @@ class SAMLAuthenticator(Authenticator):
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
         
-        authnrequest = '''<samlp:AuthnRequest
+        authnrequest = '''<saml2p:AuthnRequest
     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
     xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
     Version="2.0"
@@ -785,12 +785,12 @@ class SAMLAuthenticator(Authenticator):
     AssertionConsumerServiceURL="{{ entityLocation }}"
     Destination="{{ redirect_link }}"
 >
-    <saml:Issuer>{{ entityId }}</saml:Issuer>
-    <samlp:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
-</samlp:AuthnRequest>'''
+    <saml2:Issuer>{{ entityId }}</saml2:Issuer>
+    <saml2p:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
+</saml2p:AuthnRequest>'''
 
         now = datetime.now()
-        current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
+        current_time = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
