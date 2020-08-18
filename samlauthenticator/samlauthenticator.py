@@ -735,7 +735,7 @@ class SAMLAuthenticator(Authenticator):
         # by the user's browser.
         handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0]
             + '?SAMLRequest='
-            + str(encoded_xml_content),
+            + encoded_xml_content.decode(),
             permanent=False)
         #handler_self.redirect('http://localhost:8000/metadata', permanent=False)
 
