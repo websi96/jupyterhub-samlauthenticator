@@ -42,6 +42,8 @@ from jinja2 import Template
 from lxml import etree
 import pytz
 from signxml import XMLVerifier
+import zlib
+import base64
 
 class SAMLAuthenticator(Authenticator):
     metadata_filepath = Unicode(
@@ -705,8 +707,8 @@ class SAMLAuthenticator(Authenticator):
     def authenticate(self, handler, data):
         return self._authenticate(handler, data)
 
-    def _get_redirect_from_metadata_and_redirect(authenticator_self, element_name, handler_self):
-        saml_metadata_etree = authenticator_self._get_saml_metadata_etree()
+    def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
+        saml_metadata_etree = self._get_saml_metadata_etree()
 
         handler_self.log.debug('Got metadata etree')
 
@@ -716,7 +718,7 @@ class SAMLAuthenticator(Authenticator):
 
         handler_self.log.debug('Got valid metadata etree')
 
-        xpath_with_namespaces = authenticator_self._make_xpath_builder()
+        xpath_with_namespaces = self._make_xpath_builder()
 
         binding = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'
         final_xpath = '//' + element_name + '[@Binding=\'' + binding + '\']/@Location'
@@ -724,9 +726,19 @@ class SAMLAuthenticator(Authenticator):
 
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
+        handler_self.log.debug(redirect_link_getter)
+
+        xml_content = self._make_sp_metadata(handler_self)
+        encoded_xml_content = base64.b64encode(zlib.compress(xml_content.encode())[2:-4])
+
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
-        handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0], permanent=False)
+        handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0]
+            + '?SAMLRequest='
+            + str(encoded_xml_content),
+            permanent=False)
+        #handler_self.redirect('http://localhost:8000/metadata', permanent=False)
+
 
     def _make_org_metadata(self):
         if self.organization_name or \
@@ -763,7 +775,7 @@ class SAMLAuthenticator(Authenticator):
 
         return ''
 
-    def _make_sp_metadata(authenticator_self, meta_handler_self):
+    def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
 <EntityDescriptor
         entityID="{{ entityId }}"
@@ -784,28 +796,28 @@ class SAMLAuthenticator(Authenticator):
 </EntityDescriptor>
 '''
 
-        entity_id = authenticator_self.entity_id if authenticator_self.entity_id else \
+        entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
-        acs_endpoint_url = authenticator_self.acs_endpoint_url if authenticator_self.acs_endpoint_url else \
+        acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
                 entity_id + '/hub/login'
 
-        org_metadata_elem = authenticator_self._make_org_metadata()
+        org_metadata_elem = self._make_org_metadata()
 
         xml_template = Template(metadata_text)
         return xml_template.render(entityId=entity_id,
-                                   nameIdFormat=authenticator_self.nameid_format,
+                                   nameIdFormat=self.nameid_format,
                                    entityLocation=acs_endpoint_url,
                                    organizationMetadata=org_metadata_elem)
 
-    def get_handlers(authenticator_self, app):
+    def get_handlers(self, app):
+        authenticator = self
 
         class SAMLLoginHandler(LoginHandler):
 
-            async def get(login_handler_self):
-                login_handler_self.log.info('Starting SP-initiated SAML Login')
-                authenticator_self._get_redirect_from_metadata_and_redirect('md:SingleSignOnService',
-                                                                            login_handler_self)
+            async def get(self):
+                self.log.info('Starting SP-initiated SAML Login')
+                authenticator._get_redirect_from_metadata_and_redirect('md:SingleSignOnService', self)
 
         class SAMLLogoutHandler(LogoutHandler):
             # TODO: When the time is right to force users onto JupyterHub 1.0.0,
@@ -833,33 +845,32 @@ class SAMLAuthenticator(Authenticator):
                 if user:
                     await self._shutdown_servers(user)
 
-            async def get(logout_handler_self):
-                if authenticator_self.shutdown_on_logout:
-                    logout_handler_self.log.debug('Shutting down servers during SAML Logout')
-                    await logout_handler_self._shutdown_servers_and_backend_cleanup()
+            async def get(self):
+                if authenticator.shutdown_on_logout:
+                    self.log.debug('Shutting down servers during SAML Logout')
+                    await self._shutdown_servers_and_backend_cleanup()
 
-                if logout_handler_self.current_user:
-                    logout_handler_self._backend_logout_cleanup(logout_handler_self.current_user.name)
+                if self.current_user:
+                    self._backend_logout_cleanup(self.current_user.name)
 
                 # This is a little janky, but there was a misspelling in a prior version
                 # where someone could have set the wrong flag because of the documentation.
                 # We will honor the misspelling until we rev the version, and then we will
                 # break backward compatibility.
-                forward_on_logout = True if authenticator_self.slo_forward_on_logout else False
-                forwad_on_logout = True if authenticator_self.slo_forwad_on_logout else False
+                forward_on_logout = True if authenticator.slo_forward_on_logout else False
+                forwad_on_logout = True if authenticator.slo_forwad_on_logout else False
                 if forward_on_logout or forwad_on_logout:
-                    authenticator_self._get_redirect_from_metadata_and_redirect('md:SingleLogoutService',
-                                                                                logout_handler_self)
+                    authenticator._get_redirect_from_metadata_and_redirect('md:SingleLogoutService', self)
                 else:
-                    html = logout_handler_self.render_template('logout.html')
-                    logout_handler_self.finish(html)
+                    html = self.render_template('logout.html')
+                    self.finish(html)
 
         class SAMLMetaHandler(BaseHandler):
 
-            async def get(meta_handler_self):
-                xml_content = authenticator_self._make_sp_metadata(meta_handler_self)
-                meta_handler_self.set_header('Content-Type', 'text/xml')
-                meta_handler_self.write(xml_content)
+            async def get(self):
+                xml_content = authenticator._make_sp_metadata(self)
+                self.set_header('Content-Type', 'text/xml')
+                self.write(xml_content)
 
 
         return [('/login', SAMLLoginHandler),
