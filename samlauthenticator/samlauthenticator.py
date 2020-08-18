@@ -775,23 +775,19 @@ class SAMLAuthenticator(Authenticator):
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
         
-        authnrequest = '''
-        <saml2p:AuthnRequest
-            xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"
-            xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol"
-            Version="2.0"
-            ID="{{ uuid }}"
-            IssueInstant="{{ current_time }}"
-            ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-            AssertionConsumerServiceURL="{{ entityLocation }}"
-            Destination="{{ redirect_link }}"
-            ForceAuthn="0"
-            IsPassive="0"
-        >
-            <saml2:Issuer>{{ entityId }}</saml2:Issuer>
-            <saml2p:NameIDPolicy AllowCreate="0"/>
-        </saml2p:AuthnRequest>
-        '''
+        authnrequest = '''<samlp:AuthnRequest
+    xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+    xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+    Version="2.0"
+    ID="{{ uuid }}"
+    IssueInstant="{{ current_time }}"
+    ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+    AssertionConsumerServiceURL="{{ entityLocation }}"
+    Destination="{{ redirect_link }}"
+>
+    <saml:Issuer>{{ entityId }}</saml:Issuer>
+    <samlp:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
+</samlp:AuthnRequest>'''
 
         now = datetime.now()
         current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
