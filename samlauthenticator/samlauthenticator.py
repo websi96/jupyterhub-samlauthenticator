@@ -778,13 +778,31 @@ class SAMLAuthenticator(Authenticator):
         return ''
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
-        authnrequest = '''
+        test = '''
         <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" entityID="{{ entityId }}" ID="{{ entityId }}" 
         Version="2.0" ProviderName="{{ entityId }}" IssueInstant="{{ current_time }}" Destination="{{ redirect_link }}" 
         ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="{{ entityLocation }}">
             <saml:Issuer>{{ meta_endpoint_url }}</saml:Issuer>
             <samlp:NameIDPolicy Format="{{ nameIdFormat }}"/>
         </samlp:AuthnRequest>
+        '''
+
+        authnrequest = '''
+        <saml2p:AuthnRequest
+            xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"
+            xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol"
+            Version="2.0"
+            ID="{{ entityId }}"
+            IssueInstant="{{ current_time }}"
+            ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+            AssertionConsumerServiceURL="{{ acs_endpoint_url }}"
+            Destination="{{ redirect_link }}"
+            ForceAuthn="0"
+            IsPassive="0"
+        >
+            <saml2:Issuer>{{ entityId }}</saml2:Issuer>
+            <saml2p:NameIDPolicy AllowCreate="0"/>
+        </saml2p:AuthnRequest>
         '''
 
         from datetime import datetime
