@@ -807,7 +807,7 @@ class SAMLAuthenticator(Authenticator):
 
         from datetime import datetime
         now = datetime.now()
-        current_time = now.strftime("%Y-%M-%DT%H:%M:%S")
+        current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
 
         entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
