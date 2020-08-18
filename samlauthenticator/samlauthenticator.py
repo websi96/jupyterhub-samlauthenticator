@@ -21,7 +21,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 '''
 
 # Imports from python standard library
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from datetime import datetime, timezone
 from urllib.request import urlopen
 
@@ -43,7 +43,8 @@ from lxml import etree
 import pytz
 from signxml import XMLVerifier
 import zlib
-import base64
+import uuid
+from datetime import datetime
 
 class SAMLAuthenticator(Authenticator):
     metadata_filepath = Unicode(
@@ -726,10 +727,8 @@ class SAMLAuthenticator(Authenticator):
 
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
-        handler_self.log.debug(redirect_link_getter)
-
         xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        encoded_xml_content = base64.b64encode(zlib.compress(xml_content.encode())[2:-4])
+        encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4])
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
@@ -737,10 +736,7 @@ class SAMLAuthenticator(Authenticator):
             + '?SAMLRequest='
             + encoded_xml_content.decode(),
             permanent=False)
-        #handler_self.redirect('http://localhost:8000/metadata', permanent=False)
-
         
-
 
     def _make_org_metadata(self):
         if self.organization_name or \
@@ -778,24 +774,16 @@ class SAMLAuthenticator(Authenticator):
         return ''
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
-        test = '''
-        <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" entityID="{{ entityId }}" ID="{{ entityId }}" 
-        Version="2.0" ProviderName="{{ entityId }}" IssueInstant="{{ current_time }}" Destination="{{ redirect_link }}" 
-        ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="{{ entityLocation }}">
-            <saml:Issuer>{{ meta_endpoint_url }}</saml:Issuer>
-            <samlp:NameIDPolicy Format="{{ nameIdFormat }}"/>
-        </samlp:AuthnRequest>
-        '''
-
+        
         authnrequest = '''
         <saml2p:AuthnRequest
             xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"
             xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol"
             Version="2.0"
-            ID="{{ entityId }}"
+            ID="{{ uuid }}"
             IssueInstant="{{ current_time }}"
             ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-            AssertionConsumerServiceURL="{{ acs_endpoint_url }}"
+            AssertionConsumerServiceURL="{{ entityLocation }}"
             Destination="{{ redirect_link }}"
             ForceAuthn="0"
             IsPassive="0"
@@ -805,7 +793,6 @@ class SAMLAuthenticator(Authenticator):
         </saml2p:AuthnRequest>
         '''
 
-        from datetime import datetime
         now = datetime.now()
         current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -819,6 +806,7 @@ class SAMLAuthenticator(Authenticator):
 
         xml_template = Template(authnrequest)
         return xml_template.render( entityId=entity_id,
+                                    uuid=uuid.uuid4(),
                                     redirect_link=redirect_link,
                                     current_time=current_time,
                                     meta_endpoint_url=meta_endpoint_url,
