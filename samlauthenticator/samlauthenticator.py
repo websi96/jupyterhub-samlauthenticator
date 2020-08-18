@@ -728,7 +728,7 @@ class SAMLAuthenticator(Authenticator):
 
         handler_self.log.debug(redirect_link_getter)
 
-        xml_content = self._make_sp_metadata(handler_self)
+        xml_content = self._make_sp_authnrequest(handler_self)
         encoded_xml_content = base64.b64encode(zlib.compress(xml_content.encode())[2:-4])
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
@@ -738,6 +738,8 @@ class SAMLAuthenticator(Authenticator):
             + encoded_xml_content.decode(),
             permanent=False)
         #handler_self.redirect('http://localhost:8000/metadata', permanent=False)
+
+        
 
 
     def _make_org_metadata(self):
@@ -774,6 +776,30 @@ class SAMLAuthenticator(Authenticator):
                                                 organizationUrl=org_url_elem)
 
         return ''
+
+    def _make_sp_authnrequest(self, meta_handler_self):
+        authnrequest = '''
+        <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" entityID="{{ entityId }}" ID="{{ entityId }}" 
+        Version="2.0" ProviderName="SP test" IssueInstant="2014-07-16T23:52:45Z" Destination="http://idp.example.com/SSOService.php" 
+        ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="{{ entityLocation }}">
+            <saml:Issuer>http://sp.example.com/demo1/metadata.php</saml:Issuer>
+            <samlp:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="true"/>
+            <samlp:RequestedAuthnContext Comparison="exact">
+                <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
+            </samlp:RequestedAuthnContext>
+        </samlp:AuthnRequest>
+        '''
+
+        entity_id = self.entity_id if self.entity_id else \
+                meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+
+        acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
+                entity_id + '/hub/login'
+
+        xml_template = Template(authnrequest)
+        return xml_template.render(entityId=entity_id,
+                                   nameIdFormat=self.nameid_format,
+                                   entityLocation=acs_endpoint_url)
 
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
