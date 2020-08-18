@@ -780,15 +780,16 @@ class SAMLAuthenticator(Authenticator):
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
         authnrequest = '''
         <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" entityID="{{ entityId }}" ID="{{ entityId }}" 
-        Version="2.0" ProviderName="{{ entityId }}" IssueInstant="2014-07-16T23:52:45Z" Destination="{{ redirect_link }}" 
+        Version="2.0" ProviderName="{{ entityId }}" IssueInstant="{{ current_time }}" Destination="{{ redirect_link }}" 
         ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" AssertionConsumerServiceURL="{{ entityLocation }}">
-            <saml:Issuer>http://sp.example.com/demo1/metadata.php</saml:Issuer>
-            <samlp:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="true"/>
-            <samlp:RequestedAuthnContext Comparison="exact">
-                <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
-            </samlp:RequestedAuthnContext>
+            <saml:Issuer>{{ meta_endpoint_url }}</saml:Issuer>
+            <samlp:NameIDPolicy Format="{{ nameIdFormat }}"/>
         </samlp:AuthnRequest>
         '''
+
+        from datetime import datetime
+        now = datetime.now()
+        current_time = now.strftime("%Y-%M-%DT%H:%M:%S")
 
         entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
@@ -796,9 +797,13 @@ class SAMLAuthenticator(Authenticator):
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
                 entity_id + '/hub/login'
 
+        meta_endpoint_url = entity_id + '/hub/saml/metadata'
+
         xml_template = Template(authnrequest)
         return xml_template.render( entityId=entity_id,
                                     redirect_link=redirect_link,
+                                    current_time=current_time,
+                                    meta_endpoint_url=meta_endpoint_url,
                                     nameIdFormat=self.nameid_format,
                                     entityLocation=acs_endpoint_url)
 
