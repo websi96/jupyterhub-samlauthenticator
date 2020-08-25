@@ -45,6 +45,7 @@ import pytz
 from signxml import XMLVerifier
 import zlib
 import uuid
+import hashlib
 
 class SAMLAuthenticator(Authenticator):
     metadata_filepath = Unicode(
@@ -804,7 +805,7 @@ class SAMLAuthenticator(Authenticator):
 
         xml_template = Template(authnrequest)
         return xml_template.render( entityId=entity_id,
-                                    uuid=uuid.uuid4(),
+                                    uuid='_' + hashlib.md5(str.encode(str(uuid.uuid4()))).hexdigest(),
                                     redirect_link=redirect_link,
                                     issue_instant=issue_instant,
                                     meta_endpoint_url=meta_endpoint_url,
