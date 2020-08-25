@@ -22,7 +22,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 # Imports from python standard library
 from base64 import b64decode, b64encode
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen
 
 import asyncio
@@ -44,7 +44,6 @@ import pytz
 from signxml import XMLVerifier
 import zlib
 import uuid
-from datetime import datetime
 
 class SAMLAuthenticator(Authenticator):
     metadata_filepath = Unicode(
@@ -780,7 +779,7 @@ class SAMLAuthenticator(Authenticator):
     xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
     Version="2.0"
     ID="{{ uuid }}"
-    IssueInstant="{{ current_time }}"
+    IssueInstant="{{ issue_instant }}"
     ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
     AssertionConsumerServiceURL="{{ entityLocation }}"
     Destination="{{ redirect_link }}"
@@ -790,7 +789,8 @@ class SAMLAuthenticator(Authenticator):
 </saml2p:AuthnRequest>'''
 
         now = datetime.now()
-        current_time = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        issue_instant = now + timedelta(seconds=60)
+        issue_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
@@ -804,7 +804,7 @@ class SAMLAuthenticator(Authenticator):
         return xml_template.render( entityId=entity_id,
                                     uuid=uuid.uuid4(),
                                     redirect_link=redirect_link,
-                                    current_time=current_time,
+                                    issue_instant=issue_instant,
                                     meta_endpoint_url=meta_endpoint_url,
                                     nameIdFormat=self.nameid_format,
                                     entityLocation=acs_endpoint_url)
