@@ -24,6 +24,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 from base64 import b64decode, b64encode
 from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen
+from urllib import parse
 
 import asyncio
 import pwd
@@ -733,7 +734,7 @@ class SAMLAuthenticator(Authenticator):
         # by the user's browser.
         handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0]
             + '?SAMLRequest='
-            + encoded_xml_content.decode(),
+            + parse.quote(encoded_xml_content.decode(), safe=''),
             permanent=False)
         
 
