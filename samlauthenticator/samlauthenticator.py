@@ -781,11 +781,13 @@ class SAMLAuthenticator(Authenticator):
     Destination="{{ redirect_link }}" ForceAuthn="0"
     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
     xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol">
+    <saml:Issuer>{{ entityId }}</saml:Issuer>
+    <saml:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
 </samlp:AuthnRequest>'''
 
         backlog = '''
-        <saml2p:Issuer>{{ entityId }}</saml2p:Issuer>
-        <saml2p:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
+        <saml:Issuer>{{ entityId }}</saml:Issuer>
+        <saml:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
         '''
 
         now = datetime.now()
