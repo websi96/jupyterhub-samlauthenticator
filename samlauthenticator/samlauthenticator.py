@@ -773,20 +773,14 @@ class SAMLAuthenticator(Authenticator):
         return ''
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
-        
-        authnrequest = '''<saml2p:AuthnRequest
+
+        authnrequest = '''<samlp:AuthnRequest AssertionConsumerServiceURL="{{ entityLocation }}"
+    ID="{{ uuid }}" IsPassive="0" IssueInstant="{{ issue_instant }}"
+    ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Version="2.0"
+    Destination="{{ redirect_link }}" ForceAuthn="0"
     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
-    xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
-    Version="2.0"
-    ID="{{ uuid }}"
-    IssueInstant="{{ issue_instant }}"
-    ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-    AssertionConsumerServiceURL="{{ entityLocation }}"
-    Destination="{{ redirect_link }}"
-    ForceAuthn="0"
-    IsPassive="0"
->
-    <saml2:Issuer>{{ entityId }}</saml2:Issuer>
+    xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol">
+    <saml2p:Issuer>{{ entityId }}</saml2:Issuer>
     <saml2p:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
 </saml2p:AuthnRequest>'''
 
