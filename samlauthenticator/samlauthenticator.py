@@ -727,7 +727,7 @@ class SAMLAuthenticator(Authenticator):
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
         xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        encoded_xml_content = b64encode(xml_content.encode())
+        encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4])
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
@@ -783,6 +783,8 @@ class SAMLAuthenticator(Authenticator):
     ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
     AssertionConsumerServiceURL="{{ entityLocation }}"
     Destination="{{ redirect_link }}"
+    ForceAuthn="0"
+    IsPassive="0"
 >
     <saml2:Issuer>{{ entityId }}</saml2:Issuer>
     <saml2p:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
