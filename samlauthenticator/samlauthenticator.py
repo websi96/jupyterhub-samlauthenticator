@@ -727,7 +727,7 @@ class SAMLAuthenticator(Authenticator):
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
         xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4])
+        encoded_xml_content = b64encode(xml_content.encode())
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
