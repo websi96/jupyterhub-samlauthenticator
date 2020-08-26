@@ -52,6 +52,14 @@ from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 class SAMLAuthenticator(Authenticator):
+    auth_version = Unicode(
+        default_value='v2',
+        allow_none=True,
+        config=True,
+        help='''
+        Change between onelogin (v2) version and self scripted version (v1).
+        '''
+    )
     metadata_filepath = Unicode(
         default_value='',
         allow_none=True,
@@ -735,15 +743,17 @@ class SAMLAuthenticator(Authenticator):
 
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
-        encoded_xml_content = self._make_sp_authnrequest_v2(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        #xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        #encoded_xml_content = b64encode(zlib.compress(encoded_xml_content.encode())[2:-4])
+        if self.auth_version is 'v2':
+            encoded_xml_content = self._make_sp_authnrequest_v2(handler_self)
+        if self.auth_version is 'v1':
+            xml_content = self._make_sp_authnrequest(handler_self)
+            encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4]).decode()
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
         handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0]
             + '?SAMLRequest='
-            + parse.quote(encoded_xml_content.decode(), safe=''),
+            + parse.quote(encoded_xml_content, safe=''),
             permanent=False)
         
 
@@ -782,7 +792,7 @@ class SAMLAuthenticator(Authenticator):
 
         return ''
 
-    def _make_sp_authnrequest_v2(self, meta_handler_self, redirect_link):
+    def _make_sp_authnrequest_v2(self, meta_handler_self):
 
         entity_id = self.entity_id if self.entity_id else \
                 meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
@@ -822,11 +832,10 @@ class SAMLAuthenticator(Authenticator):
 
         settings = OneLogin_Saml2_Settings(idp_data)
         authn = OneLogin_Saml2_Authn_Request(settings)
-
         return authn.get_request()
 
 
-    def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
+    def _make_sp_authnrequest(self, meta_handler_self):
 
         authnrequest = '''<samlp:AuthnRequest AssertionConsumerServiceURL="{{ entityLocation }}"
     ID="{{ uuid }}" IsPassive="0" IssueInstant="{{ issue_instant }}"
