@@ -793,7 +793,7 @@ class SAMLAuthenticator(Authenticator):
         logout_url = entity_id + '/hub/logout'
 
         #OneLogin_Saml2_IdPMetadataParser.parse_remote('url')
-        idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source) 
+        idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source()) 
         idp_data['sp'] = {
                 "entityId": entity_id,
                 "assertionConsumerService": {
