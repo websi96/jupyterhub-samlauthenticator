@@ -46,6 +46,10 @@ from signxml import XMLVerifier
 import zlib
 import uuid
 import hashlib
+# python3-saml
+from onelogin.saml2.authn_request import OneLogin_Saml2_Authn_Request
+from onelogin.saml2.settings import OneLogin_Saml2_Settings
+from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 
 class SAMLAuthenticator(Authenticator):
     metadata_filepath = Unicode(
@@ -425,6 +429,9 @@ class SAMLAuthenticator(Authenticator):
             signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
+            self.log.warning(str(cert_value))
+            self.log.warning(str(saml_metadata))
+            self.log.warning(str(decoded_saml_doc))
             self._log_exception_error(e)
 
         return signed_xml
@@ -728,8 +735,9 @@ class SAMLAuthenticator(Authenticator):
 
         redirect_link_getter = xpath_with_namespaces(final_xpath)
 
-        xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-        encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4])
+        encoded_xml_content = self._make_sp_authnrequest_v2(handler_self, redirect_link_getter(saml_metadata_etree)[0])
+        #xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
+        #encoded_xml_content = b64encode(zlib.compress(encoded_xml_content.encode())[2:-4])
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
@@ -774,6 +782,50 @@ class SAMLAuthenticator(Authenticator):
 
         return ''
 
+    def _make_sp_authnrequest_v2(self, meta_handler_self, redirect_link):
+
+        entity_id = self.entity_id if self.entity_id else \
+                meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+
+        acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
+                entity_id + '/hub/login'
+
+        logout_url = entity_id + '/hub/logout'
+
+        #OneLogin_Saml2_IdPMetadataParser.parse_remote('url')
+        idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source) 
+        idp_data['sp'] = {
+                "entityId": entity_id,
+                "assertionConsumerService": {
+                    "url": acs_endpoint_url,
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                },
+                "singleLogoutService": {
+                    "url": logout_url,
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+                },
+                "attributeConsumingService": {
+                        "serviceName": self.audience,
+                        "serviceDescription": self.audience,
+                        "requestedAttributes": [
+                            {
+                                "name": self.audience,
+                                "isRequired": False,
+                                "nameFormat": self.nameid_format,
+                                "friendlyName": self.audience,
+                                "attributeValue": []
+                            }
+                        ]
+                },
+                "NameIDFormat": self.nameid_format
+            }
+
+        settings = OneLogin_Saml2_Settings(idp_data)
+        authn = OneLogin_Saml2_Authn_Request(settings)
+
+        return authn.get_request()
+
+
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
 
         authnrequest = '''<samlp:AuthnRequest AssertionConsumerServiceURL="{{ entityLocation }}"
@@ -801,14 +853,11 @@ class SAMLAuthenticator(Authenticator):
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
                 entity_id + '/hub/login'
 
-        meta_endpoint_url = entity_id + '/hub/saml/metadata'
-
         xml_template = Template(authnrequest)
         return xml_template.render( entityId=entity_id,
                                     uuid='_' + hashlib.md5(str.encode(str(uuid.uuid4()))).hexdigest(),
                                     redirect_link=redirect_link,
                                     issue_instant=issue_instant,
-                                    meta_endpoint_url=meta_endpoint_url,
                                     nameIdFormat=self.nameid_format,
                                     entityLocation=acs_endpoint_url)
 
