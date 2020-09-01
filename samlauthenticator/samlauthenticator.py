@@ -572,7 +572,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         signed_xml = None
         try:
             self.log.warning('TEST valitation:')
-            val = OneLogin_Saml2_Utils.validate_sign(saml_doc_etree, cert_value, fingerprint_value)
+            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, cert_value, fingerprint_value)
             self.log.warning(val)
             signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
         except Exception as e:
