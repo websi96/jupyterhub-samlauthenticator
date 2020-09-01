@@ -929,6 +929,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return self._authenticate(handler, data)
 
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
+        self._setup_settings(handler_self)
+        
         saml_metadata_etree = self._get_saml_metadata_etree()
 
         handler_self.log.debug('Got metadata etree')
@@ -1110,7 +1112,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                                    organizationMetadata=org_metadata_elem,
                                    certMetadata=cert_metadata_elem)
 
-    def _setup_settings(self):
+    def _setup_settings(self, meta_handler_self):
         entity_id = self.entity_id if self.entity_id else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
@@ -1145,8 +1147,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def get_handlers(self, app):
         authenticator = self
-
-        self._setup_settings()
 
         class SAMLLoginHandler(LoginHandler):
 
