@@ -899,7 +899,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         #    saml_metadata_etree, saml_doc_etree)
 
         #TODO: add OneLogin_Saml2_Response
-        res = OneLogin_Saml2_Response(self._const_onelogin_settins, data)
+        res = OneLogin_Saml2_Response(self._const_onelogin_settins, data.get(self.login_post_field, None))
         https = 'off'
         if 'https://' in self.acs_endpoint_url:
             https = 'on'
