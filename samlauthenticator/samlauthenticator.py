@@ -18,6 +18,13 @@ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
 OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
+
+""" OneLogin_Saml2_Auth class
+Copyright (c) 2010-2018 OneLogin, Inc.
+MIT License
+Main class of OneLogin's Python Toolkit.
+Initializes the SP SAML instance
+"""
 '''
 
 # Imports from python standard library
@@ -52,7 +59,9 @@ from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from onelogin.saml2.constants import OneLogin_Saml2_Constants
+from onelogin.saml2.utils import OneLogin_Saml2_Utils
 import xmlsec
+
 
 class SAMLAuthenticator(Authenticator):
     auth_version = Unicode(
@@ -409,9 +418,9 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         jupyterhub to these roles if specified.
         '''
     )
-    _const_warn_explain       = 'Because no user would be allowed to log in via roles, role check disabled.'
+    _const_warn_explain = 'Because no user would be allowed to log in via roles, role check disabled.'
     _const_warn_no_role_xpath = 'Allowed roles set while role location XPath is not set.'
-    _const_warn_no_roles      = 'Allowed roles not set while role location XPath is set.'
+    _const_warn_no_roles = 'Allowed roles not set while role location XPath is set.'
 
     def _get_metadata_from_file(self):
         with open(self.metadata_filepath, 'r') as saml_metadata:
@@ -465,7 +474,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         if self.key_content:
             return self._get_key_from_config()
-            
+
         return None
 
     def _log_exception_error(self, exception):
@@ -477,7 +486,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         if not saml_response:
             # Failed to get the SAML Response from the posted data
             self.log.warning('Could not get SAML Response from post data')
-            self.log.warning('Expected SAML response in field %s', self.login_post_field)
+            self.log.warning(
+                'Expected SAML response in field %s', self.login_post_field)
             self.log.warning('Posted login data %s', str(data))
             return None
 
@@ -487,7 +497,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             decoded_saml_doc = b64decode(saml_response)
         except Exception as e:
             # There was a problem base64 decoding the xml document from the posted data
-            self.log.warning('Got exception when attempting to decode SAML response')
+            self.log.warning(
+                'Got exception when attempting to decode SAML response')
             self.log.warning('Saml Response: %s', saml_response)
             self._log_exception_error(e)
             return None
@@ -495,7 +506,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         try:
             return etree.fromstring(decoded_saml_doc)
         except Exception as e:
-            self.log.warning('Got exception when attempting to hydrate response to etree')
+            self.log.warning(
+                'Got exception when attempting to hydrate response to etree')
             self.log.warning('Saml Response: %s', decoded_saml_doc)
             self._log_exception_error(e)
             return None
@@ -505,7 +517,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             saml_metadata = self._get_preferred_metadata_from_source()
         except Exception as e:
             # There was a problem getting the SAML metadata
-            self.log.warning('Got exception when attempting to read SAML metadata')
+            self.log.warning(
+                'Got exception when attempting to read SAML metadata')
             self.log.warning('Ensure that EXACTLY ONE of metadata_filepath, ' +
                              'metadata_content, and metadata_url is populated')
             self._log_exception_error(e)
@@ -513,7 +526,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         if not saml_metadata:
             # There was a problem getting the SAML metadata
-            self.log.warning('Got exception when attempting to read SAML metadata')
+            self.log.warning(
+                'Got exception when attempting to read SAML metadata')
             self.log.warning('Ensure that EXACTLY ONE of metadata_filepath, ' +
                              'metadata_content, and metadata_url is populated')
             self.log.warning('SAML metadata was empty')
@@ -525,14 +539,16 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             metadata_etree = etree.fromstring(saml_metadata)
         except Exception as e:
             # Failed to parse SAML Metadata
-            self.log.warning('Got exception when attempting to parse SAML metadata')
+            self.log.warning(
+                'Got exception when attempting to parse SAML metadata')
             self._log_exception_error(e)
 
         return metadata_etree
 
     def _verify_saml_signature(self, saml_metadata, decoded_saml_doc):
         xpath_with_namespaces = self._make_xpath_builder()
-        find_cert = xpath_with_namespaces('//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
+        find_cert = xpath_with_namespaces(
+            '//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
         cert_value = None
 
         try:
@@ -556,9 +572,9 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def _make_xpath_builder(self):
         namespaces = {
-            'ds'   : 'http://www.w3.org/2000/09/xmldsig#',
-            'md'   : 'urn:oasis:names:tc:SAML:2.0:metadata',
-            'saml' : 'urn:oasis:names:tc:SAML:2.0:assertion',
+            'ds': 'http://www.w3.org/2000/09/xmldsig#',
+            'md': 'urn:oasis:names:tc:SAML:2.0:metadata',
+            'saml': 'urn:oasis:names:tc:SAML:2.0:assertion',
             'samlp': 'urn:oasis:names:tc:SAML:2.0:protocol'
         }
 
@@ -571,23 +587,30 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xpath_with_namespaces = self._make_xpath_builder()
 
         find_entity_id = xpath_with_namespaces('//saml:Issuer/text()')
-        find_metadata_entity_id = xpath_with_namespaces('//md:EntityDescriptor/@entityID')
+        find_metadata_entity_id = xpath_with_namespaces(
+            '//md:EntityDescriptor/@entityID')
 
         saml_metadata_entity_id_list = find_metadata_entity_id(saml_metadata)
         saml_resp_entity_id_list = find_entity_id(signed_xml)
 
         if saml_resp_entity_id_list and saml_metadata_entity_id_list:
             if saml_metadata_entity_id_list[0] != saml_resp_entity_id_list[0]:
-                self.log.warning('Metadata entity id did not match the response entity id')
-                self.log.warning('Metadata entity id: %s', saml_metadata_entity_id_list[0])
-                self.log.warning('Response entity id: %s', saml_resp_entity_id_list[0])
+                self.log.warning(
+                    'Metadata entity id did not match the response entity id')
+                self.log.warning('Metadata entity id: %s',
+                                 saml_metadata_entity_id_list[0])
+                self.log.warning('Response entity id: %s',
+                                 saml_resp_entity_id_list[0])
                 return False
         else:
-            self.log.warning('The entity ID needs to be set in both the metadata and the SAML Response')
+            self.log.warning(
+                'The entity ID needs to be set in both the metadata and the SAML Response')
             if not saml_resp_entity_id_list:
-                self.log.warning('The entity ID was not set in the SAML Response')
+                self.log.warning(
+                    'The entity ID was not set in the SAML Response')
             if not saml_metadata_entity_id_list:
-                self.log.warning('The entity ID was not set in the SAML metadata')
+                self.log.warning(
+                    'The entity ID was not set in the SAML metadata')
             return False
 
         return True
@@ -600,22 +623,29 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             saml_resp_audience_list = find_audience(signed_xml)
             if saml_resp_audience_list:
                 if saml_resp_audience_list[0] != self.audience:
-                    self.log.warning('Configured audience did not match the response audience')
+                    self.log.warning(
+                        'Configured audience did not match the response audience')
                     self.log.warning('Configured audience: %s', self.audience)
-                    self.log.warning('Response audience: %s', saml_resp_audience_list[0])
+                    self.log.warning('Response audience: %s',
+                                     saml_resp_audience_list[0])
                     return False
             else:
-                self.log.warning('SAML Audience was set in authenticator config file, but not in SAML Response')
+                self.log.warning(
+                    'SAML Audience was set in authenticator config file, but not in SAML Response')
                 return False
 
         if self.recipient:
-            find_recipient = xpath_with_namespaces('//saml:SubjectConfirmationData/@Recipient')
+            find_recipient = xpath_with_namespaces(
+                '//saml:SubjectConfirmationData/@Recipient')
             recipient_list = find_recipient(signed_xml)
             if recipient_list:
                 if self.recipient != recipient_list[0]:
-                    self.log.warning('Configured recipient did not match the response recipient')
-                    self.log.warning('Configured recipient: %s', self.recipient)
-                    self.log.warning('Response recipient: %s', recipient_list[0])
+                    self.log.warning(
+                        'Configured recipient did not match the response recipient')
+                    self.log.warning(
+                        'Configured recipient: %s', self.recipient)
+                    self.log.warning('Response recipient: %s',
+                                     recipient_list[0])
                     return False
             else:
                 self.log.warning('Could not find recipient in SAML response')
@@ -631,57 +661,70 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xpath_with_namespaces = self._make_xpath_builder()
 
         find_not_before = xpath_with_namespaces('//saml:Conditions/@NotBefore')
-        find_not_on_or_after = xpath_with_namespaces('//saml:Conditions/@NotOnOrAfter')
+        find_not_on_or_after = xpath_with_namespaces(
+            '//saml:Conditions/@NotOnOrAfter')
 
         not_before_list = find_not_before(signed_xml)
         not_on_or_after_list = find_not_on_or_after(signed_xml)
 
         if not_before_list and not_on_or_after_list:
 
-            not_before_datetime = datetime.strptime(not_before_list[0], self.time_format_string)
-            not_on_or_after_datetime = datetime.strptime(not_on_or_after_list[0], self.time_format_string)
+            not_before_datetime = datetime.strptime(
+                not_before_list[0], self.time_format_string)
+            not_on_or_after_datetime = datetime.strptime(
+                not_on_or_after_list[0], self.time_format_string)
 
             timezone_obj = None
 
             if not self._is_date_aware(not_before_datetime):
                 timezone_obj = pytz.timezone(self.idp_timezone)
-                not_before_datetime = timezone_obj.localize(not_before_datetime)
+                not_before_datetime = timezone_obj.localize(
+                    not_before_datetime)
 
             if not self._is_date_aware(not_on_or_after_datetime):
                 if not timezone_obj:
                     timezone_obj = pytz.timezone(self.idp_timezone)
-                not_on_or_after_datetime = timezone_obj.localize(not_on_or_after_datetime)
+                not_on_or_after_datetime = timezone_obj.localize(
+                    not_on_or_after_datetime)
 
             now = datetime.now(timezone.utc)
 
             if now < not_before_datetime or now >= not_on_or_after_datetime:
                 self.log.warning('Bad timing condition')
                 if now < not_before_datetime:
-                    self.log.warning('Sent SAML Response before it was permitted')
+                    self.log.warning(
+                        'Sent SAML Response before it was permitted')
                 if now >= not_on_or_after_datetime:
-                    self.log.warning('Sent SAML Response after it was permitted')
+                    self.log.warning(
+                        'Sent SAML Response after it was permitted')
                 return False
         else:
-            self.log.warning('SAML assertion did not contain proper conditions')
+            self.log.warning(
+                'SAML assertion did not contain proper conditions')
             if not not_before_list:
-                self.log.warning('SAML assertion must have NotBefore annotation in Conditions')
+                self.log.warning(
+                    'SAML assertion must have NotBefore annotation in Conditions')
             if not not_on_or_after_list:
-                self.log.warning('SAML assertion must have NotOnOrAfter annotation in Conditions')
+                self.log.warning(
+                    'SAML assertion must have NotOnOrAfter annotation in Conditions')
             return False
 
         return True
 
     def _verify_saml_response_fields(self, saml_metadata, signed_xml):
         if not self._verify_saml_response_against_metadata(saml_metadata, signed_xml):
-            self.log.warning('The SAML Assertion did not match the provided metadata')
+            self.log.warning(
+                'The SAML Assertion did not match the provided metadata')
             return False
 
         if not self._verify_saml_response_against_configured_fields(signed_xml):
-            self.log.warning('The SAML Assertion did not match the configured values')
+            self.log.warning(
+                'The SAML Assertion did not match the configured values')
             return False
 
         if not self._verify_physical_constraints(signed_xml):
-            self.log.warning('The SAML Assertion did not match the physical constraints')
+            self.log.warning(
+                'The SAML Assertion did not match the physical constraints')
             return False
 
         self.log.info('The SAML Assertion matched the configured values')
@@ -801,7 +844,16 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return True
 
     def _authenticate(self, handler, data):
-        #TODO decrypt data
+        # TODO: decrypt data
+
+        self.log.warning('Decrypt DATA:')
+        self.log.warning(data)
+
+        data = OneLogin_Saml2_Utils.decrypt_element(data, self._get_preferred_key_from_source())
+        self.log.warning('Decrypted DATA:')
+        self.log.warning(data)
+        
+
 
         saml_doc_etree = self._get_saml_doc_etree(data)
 
@@ -815,15 +867,18 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.error('Error getting SAML Metadata')
             return None
 
-        valid_saml_response, signed_xml = self._test_valid_saml_response(saml_metadata_etree, saml_doc_etree)
+        valid_saml_response, signed_xml = self._test_valid_saml_response(
+            saml_metadata_etree, saml_doc_etree)
 
         if valid_saml_response:
             self.log.debug('Authenticated user using SAML')
-            username = self._get_username_from_saml_doc(signed_xml, saml_doc_etree)
+            username = self._get_username_from_saml_doc(
+                signed_xml, saml_doc_etree)
             username = self.normalize_username(username)
 
             if self._valid_config_and_roles(signed_xml, saml_doc_etree):
-                self.log.debug('Optionally create and return user: ' + username)
+                self.log.debug(
+                    'Optionally create and return user: ' + username)
                 return self._check_username_and_add_user(username)
 
             self.log.error('Assertion did not have appropriate roles')
@@ -835,7 +890,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     @gen.coroutine
     def authenticate(self, handler, data):
         return self._authenticate(handler, data)
-        
+
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
         saml_metadata_etree = self._get_saml_metadata_etree()
 
@@ -850,7 +905,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xpath_with_namespaces = self._make_xpath_builder()
 
         binding = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect'
-        final_xpath = '//' + element_name + '[@Binding=\'' + binding + '\']/@Location'
+        final_xpath = '//' + element_name + \
+            '[@Binding=\'' + binding + '\']/@Location'
         handler_self.log.debug('Final xpath is: ' + final_xpath)
 
         redirect_link_getter = xpath_with_namespaces(final_xpath)
@@ -858,16 +914,17 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         if self.auth_version is 'v2':
             encoded_xml_content = self._make_sp_authnrequest_v2(handler_self)
         if self.auth_version is 'v1':
-            xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
-            encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4]).decode()
+            xml_content = self._make_sp_authnrequest(
+                handler_self, redirect_link_getter(saml_metadata_etree)[0])
+            encoded_xml_content = b64encode(
+                zlib.compress(xml_content.encode())[2:-4]).decode()
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
         # by the user's browser.
         handler_self.redirect(redirect_link_getter(saml_metadata_etree)[0]
-            + '?SAMLRequest='
-            + parse.quote(encoded_xml_content, safe=''),
-            permanent=False)
-        
+                              + '?SAMLRequest='
+                              + parse.quote(encoded_xml_content, safe=''),
+                              permanent=False)
 
     def _make_org_metadata(self):
         if self.organization_name or \
@@ -887,15 +944,19 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
             if self.organization_name:
                 org_name_template = Template(organization_name_element)
-                org_name_elem = org_name_template.render(name=self.organization_name)
+                org_name_elem = org_name_template.render(
+                    name=self.organization_name)
 
             if self.organization_display_name:
-                org_disp_name_template = Template(organization_display_name_element)
-                org_disp_name_elem = org_disp_name_template.render(displayName=self.organization_display_name)
+                org_disp_name_template = Template(
+                    organization_display_name_element)
+                org_disp_name_elem = org_disp_name_template.render(
+                    displayName=self.organization_display_name)
 
             if self.organization_url:
                 org_url_template = Template(organization_url_element)
-                org_url_elem = org_url_template.render(url=self.organization_url)
+                org_url_elem = org_url_template.render(
+                    url=self.organization_url)
 
             org_metadata_template = Template(organization_metadata)
             return org_metadata_template.render(organizationName=org_name_elem,
@@ -909,26 +970,27 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             cert = self._get_preferred_cert_from_source()
         except Exception as e:
             # There was a problem getting the SAML metadata
-            self.log.warning('Got exception when attempting to read Certificate')
+            self.log.warning(
+                'Got exception when attempting to read Certificate')
             self.log.warning('Ensure that EXACTLY ONE of cert_filepath or ' +
                              'cert_content is populated')
             self._log_exception_error(e)
             return None
 
-        cert_data = '''<md:KeyDescriptor use="signing">
+        cert_data = '''<KeyDescriptor use="signing">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </md:KeyDescriptor>
-    <md:KeyDescriptor use="encryption">
+    </KeyDescriptor>
+    <KeyDescriptor use="encryption">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </md:KeyDescriptor>'''
+    </KeyDescriptor>'''
 
         cert_metadata_template = Template(cert_data)
 
@@ -958,7 +1020,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             )
 
         dsig_ctx = xmlsec.DSigCtx()
-        dsig_ctx.signKey = xmlsec.Key.loadMemory(key, xmlsec.KeyDataFormatPem, None)
+        dsig_ctx.signKey = xmlsec.Key.loadMemory(
+            key, xmlsec.KeyDataFormatPem, None)
 
         msg = '%s=%s' % (saml_type, parse.quote(saml_data, safe=''))
         if relay_state is not None:
@@ -973,7 +1036,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             OneLogin_Saml2_Constants.RSA_SHA384: xmlsec.TransformRsaSha384,
             OneLogin_Saml2_Constants.RSA_SHA512: xmlsec.TransformRsaSha512
         }
-        sign_algorithm_transform = sign_algorithm_transform_map.get(sign_algorithm, xmlsec.TransformRsaSha1)
+        sign_algorithm_transform = sign_algorithm_transform_map.get(
+            sign_algorithm, xmlsec.TransformRsaSha1)
 
         signature = dsig_ctx.signBinary(str(msg), sign_algorithm_transform)
         return b64encode(signature)
@@ -981,45 +1045,45 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     def _make_sp_authnrequest_v2(self, meta_handler_self):
 
         entity_id = self.entity_id if self.entity_id else \
-                meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
-                entity_id + '/hub/login'
+            entity_id + '/hub/login'
 
         logout_url = entity_id + '/hub/logout'
 
-        #OneLogin_Saml2_IdPMetadataParser.parse_remote('url')
-        idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source()) 
+        # OneLogin_Saml2_IdPMetadataParser.parse_remote('url')
+        idp_data = OneLogin_Saml2_IdPMetadataParser.parse(
+            self._get_preferred_metadata_from_source())
         idp_data['sp'] = {
-                "entityId": entity_id,
-                "assertionConsumerService": {
-                    "url": acs_endpoint_url,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-                },
-                "singleLogoutService": {
-                    "url": logout_url,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-                },
-                "attributeConsumingService": {
-                        "serviceName": self.audience,
-                        "serviceDescription": self.audience,
-                        "requestedAttributes": [
-                            {
-                                "name": self.audience,
-                                "isRequired": False,
-                                "nameFormat": self.nameid_format,
-                                "friendlyName": self.audience,
-                                "attributeValue": []
-                            }
-                        ]
-                },
-                "NameIDFormat": self.nameid_format
-            }
+            "entityId": entity_id,
+            "assertionConsumerService": {
+                "url": acs_endpoint_url,
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+            },
+            "singleLogoutService": {
+                "url": logout_url,
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            },
+            "attributeConsumingService": {
+                "serviceName": self.audience,
+                "serviceDescription": self.audience,
+                "requestedAttributes": [
+                    {
+                        "name": self.audience,
+                        "isRequired": False,
+                        "nameFormat": self.nameid_format,
+                        "friendlyName": self.audience,
+                        "attributeValue": []
+                    }
+                ]
+            },
+            "NameIDFormat": self.nameid_format
+        }
 
         settings = OneLogin_Saml2_Settings(idp_data)
         authn = OneLogin_Saml2_Authn_Request(settings)
         return authn.get_request()
-
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
 
@@ -1038,29 +1102,29 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         issue_instant = issue_instant.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         entity_id = self.entity_id if self.entity_id else \
-                meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
-                entity_id + '/hub/login'
+            entity_id + '/hub/login'
 
         xml_template = Template(authnrequest)
-        return xml_template.render( entityId=entity_id,
-                                    uuid='_' + hashlib.md5(str.encode(str(uuid.uuid4()))).hexdigest(),
-                                    redirect_link=redirect_link,
-                                    issue_instant=issue_instant,
-                                    nameIdFormat=self.nameid_format,
-                                    entityLocation=acs_endpoint_url)
-
+        return xml_template.render(entityId=entity_id,
+                                   uuid='_' +
+                                   hashlib.md5(str.encode(
+                                       str(uuid.uuid4()))).hexdigest(),
+                                   redirect_link=redirect_link,
+                                   issue_instant=issue_instant,
+                                   nameIdFormat=self.nameid_format,
+                                   entityLocation=acs_endpoint_url)
 
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
-<md:EntityDescriptor
+<EntityDescriptor
         entityID="{{ entityId }}"
         xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
-        xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
-    <md:SPSSODescriptor
+    <SPSSODescriptor
             AuthnRequestsSigned="false"
             protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
         <NameIDFormat>
@@ -1070,16 +1134,15 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                 Location="{{ entityLocation }}"/>
         {{ certMetadata }}
-    </md:SPSSODescriptor>
+    </SPSSODescriptor>
     {{ organizationMetadata }}
-</md:EntityDescriptor>
-'''
+</EntityDescriptor>'''
 
         entity_id = self.entity_id if self.entity_id else \
-                meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
-                entity_id + '/hub/login'
+            entity_id + '/hub/login'
 
         org_metadata_elem = self._make_org_metadata()
         cert_metadata_elem = self._make_cert_metadata()
@@ -1098,7 +1161,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
             async def get(self):
                 self.log.info('Starting SP-initiated SAML Login')
-                authenticator._get_redirect_from_metadata_and_redirect('md:SingleSignOnService', self)
+                authenticator._get_redirect_from_metadata_and_redirect(
+                    'md:SingleSignOnService', self)
 
         class SAMLLogoutHandler(LogoutHandler):
             # TODO: When the time is right to force users onto JupyterHub 1.0.0,
@@ -1113,7 +1177,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                     self.log.debug("Shutting down %s's servers", user.name)
                     futures = []
                     for server_name in active_servers:
-                        futures.append(maybe_future(self.stop_single_user(user, server_name)))
+                        futures.append(maybe_future(
+                            self.stop_single_user(user, server_name)))
                     await asyncio.gather(*futures)
 
             def _backend_logout_cleanup(self, name):
@@ -1141,7 +1206,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 forward_on_logout = True if authenticator.slo_forward_on_logout else False
                 forwad_on_logout = True if authenticator.slo_forwad_on_logout else False
                 if forward_on_logout or forwad_on_logout:
-                    authenticator._get_redirect_from_metadata_and_redirect('md:SingleLogoutService', self)
+                    authenticator._get_redirect_from_metadata_and_redirect(
+                        'md:SingleLogoutService', self)
                 else:
                     html = self.render_template('logout.html')
                     self.finish(html)
@@ -1152,7 +1218,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 xml_content = authenticator._make_sp_metadata(self)
                 self.set_header('Content-Type', 'text/xml')
                 self.write(xml_content)
-
 
         return [('/login', SAMLLoginHandler),
                 ('/hub/login', SAMLLoginHandler),
