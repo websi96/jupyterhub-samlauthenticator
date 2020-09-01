@@ -60,6 +60,14 @@ class SAMLAuthenticator(Authenticator):
         Change between onelogin (v2) version and self scripted version (v1).
         '''
     )
+    cert = Unicode(
+        default_value='',
+        allow_none=True,
+        config=True,
+        help='''
+        Provide a Certificate for encryption
+        '''
+    )
     metadata_filepath = Unicode(
         default_value='',
         allow_none=True,
@@ -792,6 +800,21 @@ class SAMLAuthenticator(Authenticator):
 
         return ''
 
+    def _make_cert_metadata(self):
+        cert_data = '''<KeyDescriptor use="encryption">
+            <ds:KeyInfo>
+                    <ds:X509Data>
+                        <ds:X509Certificate>
+                            {{ cert }}
+                        </ds:X509Certificate>
+                    </ds:X509Data>
+            </ds:KeyInfo>
+        </KeyDescriptor>'''
+
+        cert_metadata_template = Template(cert_data)
+
+        return org_metadata_template.render(cert=self.cert)
+
     def _make_sp_authnrequest_v2(self, meta_handler_self):
 
         entity_id = self.entity_id if self.entity_id else \
@@ -870,6 +893,7 @@ class SAMLAuthenticator(Authenticator):
                                     nameIdFormat=self.nameid_format,
                                     entityLocation=acs_endpoint_url)
 
+
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
 <EntityDescriptor
@@ -888,6 +912,7 @@ class SAMLAuthenticator(Authenticator):
                 Location="{{ entityLocation }}"/>
     </SPSSODescriptor>
     {{ organizationMetadata }}
+    {{ certMetadata }}
 </EntityDescriptor>
 '''
 
@@ -898,12 +923,14 @@ class SAMLAuthenticator(Authenticator):
                 entity_id + '/hub/login'
 
         org_metadata_elem = self._make_org_metadata()
+        cert_metadata_elem = self._make_cert_metadata()
 
         xml_template = Template(metadata_text)
         return xml_template.render(entityId=entity_id,
                                    nameIdFormat=self.nameid_format,
                                    entityLocation=acs_endpoint_url,
-                                   organizationMetadata=org_metadata_elem)
+                                   organizationMetadata=org_metadata_elem,
+                                   certMetadata=cert_metadata_elem)
 
     def get_handlers(self, app):
         authenticator = self
