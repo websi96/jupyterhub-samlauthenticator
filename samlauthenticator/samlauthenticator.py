@@ -569,11 +569,21 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._log_exception_error(e)
             return None
 
+
+        # Load the key into the xmlsec context
+        key = self._get_preferred_key_from_source()
+        if not key:
+            raise OneLogin_Saml2_Error(
+                "Trying to validate the %s but can't load the SP private key" % decoded_saml_doc,
+                OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
+            )
+
         signed_xml = None
         try:
             self.log.warning('TEST valitation:')
             #TODO: get algorithm from xml
-            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, cert_value, fingerprint_value, 'sha256', False, True)
+            
+            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, OneLogin_Saml2_Utils.format_cert(cert_value), fingerprint_value, 'sha256', debug=True)
             self.log.warning(val)
             signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
         except Exception as e:
@@ -936,15 +946,15 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 self.organization_display_name or \
                 self.organization_url:
             org_name_elem = org_disp_name_elem = org_url_elem = ''
-            organization_name_element = '''<OrganizationName>{{ name }}</OrganizationName>'''
-            organization_display_name_element = '''<OrganizationDisplayName>{{ displayName }}</OrganizationDisplayName>'''
-            organization_url_element = '''<OrganizationURL>{{ url }}</OrganizationURL>'''
+            organization_name_element = '''<md:OrganizationName>{{ name }}</md:OrganizationName>'''
+            organization_display_name_element = '''<md:OrganizationDisplayName>{{ displayName }}</md:OrganizationDisplayName>'''
+            organization_url_element = '''<md:OrganizationURL>{{ url }}</md:OrganizationURL>'''
             organization_metadata = '''
-    <Organization>
+    <md:Organization>
         {{ organizationName }}
         {{ organizationDisplayName }}
         {{ organizationUrl }}
-    </Organization>
+    </md:Organization>
     '''
 
             if self.organization_name:
@@ -982,20 +992,20 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._log_exception_error(e)
             return None
 
-        cert_data = '''<KeyDescriptor use="signing">
+        cert_data = '''<md:KeyDescriptor use="signing">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </KeyDescriptor>
-    <KeyDescriptor use="encryption">
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </KeyDescriptor>'''
+    </md:KeyDescriptor>'''
 
         cert_metadata_template = Template(cert_data)
 
@@ -1124,24 +1134,24 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
-<EntityDescriptor
+<md:EntityDescriptor
         entityID="{{ entityId }}"
-        xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+        xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
-    <SPSSODescriptor
+    <md:SPSSODescriptor
             AuthnRequestsSigned="false"
             protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-        <NameIDFormat>
+        <md:NameIDFormat>
             {{ nameIdFormat }}
-        </NameIDFormat>
-        <AssertionConsumerService
+        </md:NameIDFormat>
+        <md:AssertionConsumerService
                 Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                 Location="{{ entityLocation }}"/>
         {{ certMetadata }}
-    </SPSSODescriptor>
+    </md:SPSSODescriptor>
     {{ organizationMetadata }}
-</EntityDescriptor>'''
+</md:EntityDescriptor>'''
 
         entity_id = self.entity_id if self.entity_id else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
