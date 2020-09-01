@@ -563,7 +563,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             return None
 
         try:
-            fingerprint_value = find_fingerprint(saml_metadata)[0]
+            fingerprint_value = find_fingerprint(decoded_saml_doc)[0]
         except Exception as e:
             self.log.warning('Could not get fingerprint value from saml metadata')
             self._log_exception_error(e)
