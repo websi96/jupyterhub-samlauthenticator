@@ -913,20 +913,20 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._log_exception_error(e)
             return None
 
-        cert_data = '''<KeyDescriptor use="signing">
+        cert_data = '''<md:KeyDescriptor use="signing">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </KeyDescriptor>
-    <KeyDescriptor use="encryption">
+    </md:KeyDescriptor>
+    <md:KeyDescriptor use="encryption">
         <ds:KeyInfo>
                 <ds:X509Data>
                     <ds:X509Certificate>{{cert}}</ds:X509Certificate>
                 </ds:X509Data>
         </ds:KeyInfo>
-    </KeyDescriptor>'''
+    </md:KeyDescriptor>'''
 
         cert_metadata_template = Template(cert_data)
 
@@ -1052,12 +1052,12 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def _make_sp_metadata(self, meta_handler_self):
         metadata_text = '''<?xml version="1.0"?>
-<EntityDescriptor
+<md:EntityDescriptor
         entityID="{{ entityId }}"
         xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
-    <SPSSODescriptor
+    <md:SPSSODescriptor
             AuthnRequestsSigned="false"
             protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
         <NameIDFormat>
@@ -1066,10 +1066,10 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         <AssertionConsumerService
                 Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
                 Location="{{ entityLocation }}"/>
-    </SPSSODescriptor>
+        {{ certMetadata }}
+    </md:SPSSODescriptor>
     {{ organizationMetadata }}
-    {{ certMetadata }}
-</EntityDescriptor>
+</md:EntityDescriptor>
 '''
 
         entity_id = self.entity_id if self.entity_id else \
