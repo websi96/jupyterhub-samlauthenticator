@@ -578,7 +578,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             return None
 
         # Load the key into the xmlsec context
-        key = self._get_preferred_key_from_source()
+        key = self._get_preferred_key_from_source(True)
         if not key:
             raise OneLogin_Saml2_Error(
                 "Trying to validate the %s but can't load the SP private key" % decoded_saml_doc,
