@@ -591,11 +591,11 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         signed_xml = None
         try:
-            self.log.warning('TEST valitation:')
             #TODO: get algorithm from xml
             
-            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', debug=True)
-            self.log.warning(val)
+            self.log.warning('TEST valitation:')
+            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', validatecert=True, debug=True)
+            self.log.warning(validated)
 
             if not validated:
                 raise OneLogin_Saml2_Error(
@@ -607,8 +607,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
             self.log.warning(str(cert_values))
-            self.log.warning(str(saml_metadata))
-            self.log.warning(str(decoded_saml_doc))
             self._log_exception_error(e)
 
         return signed_xml
