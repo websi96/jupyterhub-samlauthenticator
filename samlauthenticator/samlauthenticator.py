@@ -556,7 +556,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         fingerprint_value = None
 
         try:
-            cert_value = find_cert(saml_metadata)[0]
+            cert_values = find_cert(saml_metadata)
         except Exception as e:
             self.log.warning('Could not get cert value from saml metadata')
             self._log_exception_error(e)
@@ -583,9 +583,10 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.warning('TEST valitation:')
             #TODO: get algorithm from xml
             
-            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, OneLogin_Saml2_Utils.format_cert(cert_value), fingerprint_value, 'sha256', debug=True)
+            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', debug=True)
             self.log.warning(val)
-            signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
+            #signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
+            signed_xml = decoded_saml_doc
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
             self.log.warning(str(cert_value))
