@@ -50,6 +50,8 @@ import hashlib
 from onelogin.saml2.authn_request import OneLogin_Saml2_Authn_Request
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+from onelogin.saml2.errors import OneLogin_Saml2_Error
+from onelogin.saml2.constants import OneLogin_Saml2_Constants
 import xmlsec
 
 class SAMLAuthenticator(Authenticator):
@@ -960,10 +962,10 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         dsig_ctx = xmlsec.DSigCtx()
         dsig_ctx.signKey = xmlsec.Key.loadMemory(key, xmlsec.KeyDataFormatPem, None)
 
-        msg = '%s=%s' % (saml_type, quote_plus(saml_data))
+        msg = '%s=%s' % (saml_type, parse.quote(saml_data, safe=''))
         if relay_state is not None:
-            msg += '&RelayState=%s' % quote_plus(relay_state)
-        msg += '&SigAlg=%s' % quote_plus(sign_algorithm)
+            msg += '&RelayState=%s' % parse.quote(relay_state, safe='')
+        msg += '&SigAlg=%s' % parse.quote(sign_algorithm, safe='')
 
         # Sign the metadata with our private key.
         sign_algorithm_transform_map = {
