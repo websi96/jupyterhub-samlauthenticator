@@ -801,6 +801,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return True
 
     def _authenticate(self, handler, data):
+        #TODO decrypt data
+
         saml_doc_etree = self._get_saml_doc_etree(data)
 
         if saml_doc_etree is None or len(saml_doc_etree) == 0:
@@ -1056,6 +1058,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         entityID="{{ entityId }}"
         xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+        xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
     <md:SPSSODescriptor
             AuthnRequestsSigned="false"
