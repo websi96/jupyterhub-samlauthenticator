@@ -467,20 +467,28 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     def _get_key_from_config(self):
         return self.key_content
 
-    def _get_preferred_cert_from_source(self):
+    def _get_preferred_cert_from_source(self, format=False):
         if self.cert_filepath:
+            if format:
+                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_file())
             return self._get_cert_from_file()
 
         if self.cert_content:
+            if format:
+                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_config())
             return self._get_cert_from_config()
 
         return None
 
-    def _get_preferred_key_from_source(self):
+    def _get_preferred_key_from_source(self, format=False):
         if self.key_filepath:
+            if format:
+                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_file())
             return self._get_key_from_file()
 
         if self.key_content:
+            if format:
+                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_config())
             return self._get_key_from_config()
 
         return None
@@ -559,10 +567,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             '//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
         cert_values = None
 
-        find_fingerprint = xpath_with_namespaces(
-            '//ds:SignedInfo/ds:Reference/ds:DigestValue/text()')
-        fingerprint_value = None
-
         try:
             certs = find_cert(saml_metadata)
             cert_values = []
@@ -573,14 +577,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._log_exception_error(e)
             return None
 
-        try:
-            fingerprint_value = find_fingerprint(decoded_saml_doc)[0]
-        except Exception as e:
-            self.log.warning('Could not get fingerprint value from saml metadata')
-            self._log_exception_error(e)
-            return None
-
-
         # Load the key into the xmlsec context
         key = self._get_preferred_key_from_source()
         if not key:
@@ -588,7 +584,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 "Trying to validate the %s but can't load the SP private key" % decoded_saml_doc,
                 OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
             )
-
+        
         signed_xml = None
         try:
             #TODO: get algorithm from xml
@@ -997,7 +993,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def _make_cert_metadata(self):
         try:
-            cert = self._get_preferred_cert_from_source()
+            cert = self._get_preferred_cert_from_source(False)
         except Exception as e:
             # There was a problem getting the SAML metadata
             self.log.warning(
