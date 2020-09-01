@@ -1126,7 +1126,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(
             self._get_preferred_metadata_from_source())
         _idp_data['sp'] = {
-            "entityId": self.entity_id,
+            "entityId": entity_id,
             "assertionConsumerService": {
                 "url": acs_endpoint_url,
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
