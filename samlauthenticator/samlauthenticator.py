@@ -430,6 +430,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     _const_warn_explain = 'Because no user would be allowed to log in via roles, role check disabled.'
     _const_warn_no_role_xpath = 'Allowed roles set while role location XPath is not set.'
     _const_warn_no_roles = 'Allowed roles not set while role location XPath is set.'
+    _const_onelogin_settins = 'Use onelogin settings'
 
     def _get_metadata_from_file(self):
         with open(self.metadata_filepath, 'r') as saml_metadata:
@@ -898,8 +899,11 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         #    saml_metadata_etree, saml_doc_etree)
 
         #TODO: add OneLogin_Saml2_Response
-        res = OneLogin_Saml2_Response(self.settings, data)
-        valid_saml_response = res.is_valid({})
+        res = OneLogin_Saml2_Response(self._const_onelogin_settins, data)
+        https = 'off'
+        if 'https://' in self.acs_endpoint_url:
+            https = 'on'
+        valid_saml_response = res.is_valid({'servername':self.acs_endpoint_url.replace('https://', '').replace('http://', ''), 'https':https})
         signed_xml = res.get_xml_document()
 
         if valid_saml_response:
@@ -1068,8 +1072,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             "NameIDFormat": self.nameid_format
         }
 
-        self.settings = OneLogin_Saml2_Settings(idp_data)
-        authn = OneLogin_Saml2_Authn_Request(self.settings)
+        self._const_onelogin_settins = OneLogin_Saml2_Settings(idp_data)
+        authn = OneLogin_Saml2_Authn_Request(self._const_onelogin_settins)
         if self.use_signing:
             return OneLogin_Saml2_Utils.add_sign(authn.get_request(), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
         else:
