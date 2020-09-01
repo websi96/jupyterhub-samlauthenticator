@@ -430,7 +430,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     _const_warn_explain = 'Because no user would be allowed to log in via roles, role check disabled.'
     _const_warn_no_role_xpath = 'Allowed roles set while role location XPath is not set.'
     _const_warn_no_roles = 'Allowed roles not set while role location XPath is set.'
-    _const_onelogin_settins = None
 
     def _get_metadata_from_file(self):
         with open(self.metadata_filepath, 'r') as saml_metadata:
@@ -586,21 +585,24 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 "Trying to validate the %s but can't load the SP private key" % decoded_saml_doc,
                 OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
             )
-        
+
         signed_xml = None
         try:
-            #TODO: get algorithm from xml
-            
+            # TODO: get algorithm from xml
+
             self.log.warning('TEST valitation:')
-            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, debug=True)
+            validated = OneLogin_Saml2_Utils.validate_sign(
+                decoded_saml_doc, multicerts=cert_values, debug=True)
             self.log.warning(validated)
 
             validated = True
 
             if not validated:
-                raise OneLogin_Saml2_Error("Failed to validate the Response but can't validate signature", 15)
+                raise OneLogin_Saml2_Error(
+                    "Failed to validate the Response but can't validate signature", 15)
             #signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
-            signed_xml = OneLogin_Saml2_Utils.decrypt_element(decoded_saml_doc, key, debug=True)
+            signed_xml = OneLogin_Saml2_Utils.decrypt_element(
+                decoded_saml_doc, key, debug=True)
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
             self.log.warning(str(cert_values))
@@ -895,20 +897,22 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.error('Error getting SAML Metadata')
             return None
 
-        #valid_saml_response, signed_xml = self._test_valid_saml_response(
+        # valid_saml_response, signed_xml = self._test_valid_saml_response(
         #    saml_metadata_etree, saml_doc_etree)
 
-        #TODO: add OneLogin_Saml2_Response
-        res = OneLogin_Saml2_Response(self._const_onelogin_settins, data.get(self.login_post_field, None))
+        # TODO: add OneLogin_Saml2_Response
+        res = OneLogin_Saml2_Response(
+            self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
         https = 'off'
         if 'https://' in self.acs_endpoint_url:
             https = 'on'
-        valid_saml_response = res.is_valid({'servername':self.acs_endpoint_url.replace('https://', '').replace('http://', ''), 'https':https})
+        valid_saml_response = res.is_valid({'servername': self.acs_endpoint_url.replace(
+            'https://', '').replace('http://', ''), 'https': https})
         signed_xml = res.get_xml_document()
 
         if valid_saml_response:
             self.log.debug('Authenticated user using SAML')
-            #TODO: get username from signed_xml, maybe rename signed_xml to userdata
+            # TODO: get username from signed_xml, maybe rename signed_xml to userdata
             username = self._get_username_from_saml_doc(
                 signed_xml, saml_doc_etree)
             username = self.normalize_username(username)
@@ -929,8 +933,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return self._authenticate(handler, data)
 
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
-        self._setup_settings(handler_self)
-        
         saml_metadata_etree = self._get_saml_metadata_etree()
 
         handler_self.log.debug('Got metadata etree')
@@ -1036,7 +1038,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return cert_metadata_template.render(cert=cert)
 
     def _make_sp_authnrequest_v2(self, meta_handler_self):
-        authn = OneLogin_Saml2_Authn_Request(self._const_onelogin_settins)
+        authn = OneLogin_Saml2_Authn_Request(self._get_onelogin_settings(meta_handler_self))
 
         if self.use_signing:
             return OneLogin_Saml2_Utils.add_sign(authn.get_request(False), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
@@ -1112,7 +1114,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                                    organizationMetadata=org_metadata_elem,
                                    certMetadata=cert_metadata_elem)
 
-    def _setup_settings(self, meta_handler_self):
+    def _get_onelogin_settings(self, meta_handler_self):
         entity_id = self.entity_id if self.entity_id else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
@@ -1121,29 +1123,30 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         logout_url = entity_id + '/hub/logout'
 
-        _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source())
+        _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(
+            self._get_preferred_metadata_from_source())
         _idp_data['sp'] = {
-                "entityId": self.entity_id,
-                "assertionConsumerService": {
-                    "url": acs_endpoint_url,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-                },
-                "attributeConsumingService": {
-                    "serviceName": self.audience,
-                    "serviceDescription": self.audience,
-                    "requestedAttributes": [
-                        {
-                            "name": self.audience,
-                            "isRequired": False,
-                            "nameFormat": self.nameid_format,
-                            "friendlyName": self.audience,
-                            "attributeValue": []
-                        }
-                    ]
-                },
-                "NameIDFormat": self.nameid_format
-            }
-        self._const_onelogin_settins = OneLogin_Saml2_Settings(_idp_data)
+            "entityId": self.entity_id,
+            "assertionConsumerService": {
+                "url": acs_endpoint_url,
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+            },
+            "attributeConsumingService": {
+                "serviceName": self.audience,
+                "serviceDescription": self.audience,
+                "requestedAttributes": [
+                    {
+                        "name": self.audience,
+                        "isRequired": False,
+                        "nameFormat": self.nameid_format,
+                        "friendlyName": self.audience,
+                        "attributeValue": []
+                    }
+                ]
+            },
+            "NameIDFormat": self.nameid_format
+        }
+        return OneLogin_Saml2_Settings(_idp_data)
 
     def get_handlers(self, app):
         authenticator = self
