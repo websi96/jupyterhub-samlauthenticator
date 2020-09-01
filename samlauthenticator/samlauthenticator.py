@@ -430,33 +430,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     _const_warn_explain = 'Because no user would be allowed to log in via roles, role check disabled.'
     _const_warn_no_role_xpath = 'Allowed roles set while role location XPath is not set.'
     _const_warn_no_roles = 'Allowed roles not set while role location XPath is set.'
-    _const_onelogin_settins = None
-
-    def __init__(self):
-        # init onelogin settings
-        _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source())
-        _idp_data['sp'] = {
-                "entityId": self.entity_id,
-                "assertionConsumerService": {
-                    "url": self.acs_endpoint_url,
-                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-                },
-                "attributeConsumingService": {
-                    "serviceName": self.audience,
-                    "serviceDescription": self.audience,
-                    "requestedAttributes": [
-                        {
-                            "name": self.audience,
-                            "isRequired": False,
-                            "nameFormat": self.nameid_format,
-                            "friendlyName": self.audience,
-                            "attributeValue": []
-                        }
-                    ]
-                },
-                "NameIDFormat": self.nameid_format
-            }
-        self._const_onelogin_settins = OneLogin_Saml2_Settings(_idp_data)
+    _const_onelogin_settins = OneLogin_Saml2_Settings()
 
     def _get_metadata_from_file(self):
         with open(self.metadata_filepath, 'r') as saml_metadata:
@@ -1068,6 +1042,31 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             entity_id + '/hub/login'
 
         logout_url = entity_id + '/hub/logout'
+
+        _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(self._get_preferred_metadata_from_source())
+        _idp_data['sp'] = {
+                "entityId": self.entity_id,
+                "assertionConsumerService": {
+                    "url": acs_endpoint_url,
+                    "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                },
+                "attributeConsumingService": {
+                    "serviceName": self.audience,
+                    "serviceDescription": self.audience,
+                    "requestedAttributes": [
+                        {
+                            "name": self.audience,
+                            "isRequired": False,
+                            "nameFormat": self.nameid_format,
+                            "friendlyName": self.audience,
+                            "attributeValue": []
+                        }
+                    ]
+                },
+                "NameIDFormat": self.nameid_format
+            }
+        self._const_onelogin_settins = OneLogin_Saml2_Settings(_idp_data)
+
         authn = OneLogin_Saml2_Authn_Request(self._const_onelogin_settins)
 
         if self.use_signing:
