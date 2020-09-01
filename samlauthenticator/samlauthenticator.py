@@ -1144,7 +1144,9 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                     }
                 ]
             },
-            "NameIDFormat": self.nameid_format
+            "NameIDFormat": self.nameid_format,
+            "x509cert": self._get_preferred_cert_from_source(True),
+            "privateKey": self._get_preferred_key_from_source(True)
         }
         return OneLogin_Saml2_Settings(_idp_data)
 
