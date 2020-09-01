@@ -594,13 +594,13 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             #TODO: get algorithm from xml
             
             self.log.warning('TEST valitation:')
-            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', validatecert=True, debug=True)
+            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, debug=True)
             self.log.warning(validated)
 
             if not validated:
                 raise OneLogin_Saml2_Error(
-                    "Failed to validate the %s but can't validate signature" % decoded_saml_doc,
-                    OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
+                    "Failed to validate the Response but can't validate signature",
+                    15
                 )
             #signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
             signed_xml = decoded_saml_doc
