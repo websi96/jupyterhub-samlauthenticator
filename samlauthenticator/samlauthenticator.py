@@ -1123,9 +1123,11 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         logout_url = entity_id + '/hub/logout'
 
-        _idp_data = OneLogin_Saml2_IdPMetadataParser.parse(
+        settings = OneLogin_Saml2_IdPMetadataParser.parse(
             self._get_preferred_metadata_from_source())
-        _idp_data['sp'] = {
+        settings['strict'] = False
+        settings['debug'] = True
+        settings['sp'] = {
             "entityId": entity_id,
             "assertionConsumerService": {
                 "url": acs_endpoint_url,
@@ -1148,7 +1150,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             "x509cert": self._get_preferred_cert_from_source(True),
             "privateKey": self._get_preferred_key_from_source(True)
         }
-        return OneLogin_Saml2_Settings(_idp_data)
+        return OneLogin_Saml2_Settings(settings)
 
     def get_handlers(self, app):
         authenticator = self
