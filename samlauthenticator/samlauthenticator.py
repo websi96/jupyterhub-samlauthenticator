@@ -60,12 +60,79 @@ class SAMLAuthenticator(Authenticator):
         Change between onelogin (v2) version and self scripted version (v1).
         '''
     )
-    cert = Unicode(
+    cert_content = Unicode(
+        default_value='''MIIDZTCCAk2gAwIBAgIUAggg3MKYR2S+qJB/l4hlVqZKH7IwDQYJKoZIhvcNAQEL
+BQAwQjELMAkGA1UEBhMCWFgxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEcMBoGA1UE
+CgwTRGVmYXVsdCBDb21wYW55IEx0ZDAeFw0yMDA5MDExMDEwMjhaFw0yMDEwMDEx
+MDEwMjhaMEIxCzAJBgNVBAYTAlhYMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAa
+BgNVBAoME0RlZmF1bHQgQ29tcGFueSBMdGQwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQCXTTD/NLl/IlxSGn7C8Arv67om678FEGpVGhWWnaoOwu4wOTPD
+Z/EblCiM5IuiGKSU7aQji5HGeu8uALuwFhqlTiQg2r7jMrUio0tK+eUnJSXFLQwu
+AumHYXZLKSXFiBmiGIKENz5zp+o9leVFJij+9QOZNQq+o+AkZwHaaO6FZ8jNWt/e
+BTf7w8YT4azqqJaw3SypQYIIu2cMnoZAThAjsYzNxzVLR2KJJe/p76Z5mKzBw9/E
+V6DbRWZ6hh1awj2F3VwH8DnKf1JCHAqOqTz4y7ddIcXux3HiCR0BNBygS8HZC7JJ
+lPMDj4LTJQ9VP6uT77V36ovynA1+UMVrVQLvAgMBAAGjUzBRMB0GA1UdDgQWBBTY
+uYzlIv+2M7TXIY/x94YCIh38qjAfBgNVHSMEGDAWgBTYuYzlIv+2M7TXIY/x94YC
+Ih38qjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQBFd1DeNO0n
+4aWrcE1onso35P0bnO1jvU5xAmMWVuo2aODyDVzlI6XxnrO7LuY1J7jYiShjj2QB
+Nfm7polHz35XogoWUSgWjsPBZrX+HpUbIk5eCtzqY8l/doBT6nWg4R3oqwfU+MdN
+1HzPIoaL9reUKv4mYsv5wAKbz2PoH5uFaMSSfymy8fYrGiZFZIHfSMbeWIqZq8Iv
+MtcMjq66h4PrCgFaaQ2mt6UYv5NP74UEpbbwOMfZm+2hbJau5OT2gHdFuhLITu4C
+RMQMjaxUqYgEqFokIl5L9fuHW9EEQmKXlV3AdcmQcuf/gkCuTiKYxg/Od4r2CeIZ
+SpZwwE1/+eeN''',
+        allow_none=True,
+        config=True,
+        help='''
+        Provide a Certificate for encryption
+        '''
+    )
+    cert_filepath = Unicode(
         default_value='',
         allow_none=True,
         config=True,
         help='''
         Provide a Certificate for encryption
+        '''
+    )
+    key_content = Unicode(
+        default_value='''MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCXTTD/NLl/IlxS
+Gn7C8Arv67om678FEGpVGhWWnaoOwu4wOTPDZ/EblCiM5IuiGKSU7aQji5HGeu8u
+ALuwFhqlTiQg2r7jMrUio0tK+eUnJSXFLQwuAumHYXZLKSXFiBmiGIKENz5zp+o9
+leVFJij+9QOZNQq+o+AkZwHaaO6FZ8jNWt/eBTf7w8YT4azqqJaw3SypQYIIu2cM
+noZAThAjsYzNxzVLR2KJJe/p76Z5mKzBw9/EV6DbRWZ6hh1awj2F3VwH8DnKf1JC
+HAqOqTz4y7ddIcXux3HiCR0BNBygS8HZC7JJlPMDj4LTJQ9VP6uT77V36ovynA1+
+UMVrVQLvAgMBAAECggEAc7renIbm0GEm/sI3bcKQix3jILw4O5ZnzzqJgtCMcIgY
+CxjmCDSsTy0Pq11xlQaGdUgkwe+TDJ+h7a0v4yu1K/ZOWjcXxc9Wj+0ZvXrSFhQr
+BNxFMbiWijA5fJo3wxUsjjlzM9DR20N4P601VqQuvX4KR5kz48iTvSRxXW/f6nfg
+Dk1NfcHkJz321raI1KUTzAD1wq4pEsh8L7cLrchEX9vDsTaQ0mzW0OWpkGUWJm2r
+5e8RFnqE4w+ZdPoC2bVrXVRK5bA8dTv53i9JaCDyoBi44gYIHLGbAQM58zyjaNA/
+AYLD0RyZDN5wzOc6MFEZZniE3u+15BT5m8hXD+WxuQKBgQDJcfr+V0Nb8loTfJuK
+h9O3GwsT6jF95vfqBuV/06BsuBT1lTf+WPnbqt1GxSMsWbtWfu2jLSBQ4AFtb1dV
+NJArTVH3zsbNPCF/KnjNzGTb2vSWffIIPFQDLO2esWtTxwU9lU4rq2u8N3WXYGZU
+hHlfkfaXM0sseiDtI9lrNIlYywKBgQDARsrNuMlwQa3kzDmHJI3lf59ge9Yz+l8w
+xCexbWtGPZfnqetd+l5FWA8Ib9HcqcKOGzFY8OTXJ/vGZsa/GfFkkybKf20Jo78e
+iN2IqNK2ge6tE2y0oPYjV8ds0DUtwI4ZlZQP1rzFEi4AXn8P/+tZLi7tVlXMv11H
+UIihLBKN7QKBgQC1n159EpBYxhkQmLhkHjJ0VJ2YRv54VVYQWkdxCI0LeKzs/qyN
+VgtwUo1O0U71HbIaOjZneLg6Mr0WvdwvpkSVxhCxLG1xfVV2IgTpB++nibIcPVGK
+u1nDwy46dhweXMIM1CC2nsdz20zaPsAEU6xazm9Vw5lzcGlfZYMRdTygIQKBgQCS
++wq4rBNAftShXAR17FmUIDUDGmcqILB3pNr65LvmW9stOlUz59n8hE4pkuEIH7Ub
+0GmupacpWeU7SwGOwBQpX9t9XF9LySKmAtXmS7eX0EdVgs3MXmcJqWZHJfog2VtG
+73LZkLuIolcL7TCQWH/eElHJGABKndZ+V2+6VOhyGQKBgC367tYU7FKMW0gnCFkB
+NezyF8t3pssGmn1uE0bRwe2bmITWaUt0B2EqI0Xbo02vqsfICDtBitxgNHi0J187
+aT/94klm9MOcK+3sSKqdvrXgN4f8DD631utkkahED1ArxcDDsb75P0XToKnJGeul
+BqyvsK6SXsj16MuGXHDgiJNN''',
+        allow_none=True,
+        config=True,
+        help='''
+        Provide a Key for encryption
+        '''
+    )
+    key_filepath = Unicode(
+        default_value='',
+        allow_none=True,
+        config=True,
+        help='''
+        Provide a Key for encryption
         '''
     )
     metadata_filepath = Unicode(
@@ -364,6 +431,38 @@ class SAMLAuthenticator(Authenticator):
         if self.metadata_url:
             return self._get_metadata_from_url()
 
+        return None
+
+    def _get_cert_from_file(self):
+        with open(self.cert_filepath, 'r') as cert:
+            return cert.read()
+
+    def _get_cert_from_config(self):
+        return self.cert_content
+
+    def _get_key_from_file(self):
+        with open(self.key_filepath, 'r') as key:
+            return key.read()
+
+    def _get_key_from_config(self):
+        return self.key_content
+
+    def _get_preferred_cert_from_source(self):
+        if self.cert_filepath:
+            return self._get_cert_from_file()
+
+        if self.cert_content:
+            return self._get_cert_from_config()
+
+        return None
+
+    def _get_preferred_key_from_source(self):
+        if self.key_filepath:
+            return self._get_key_from_file()
+
+        if self.key_content:
+            return self._get_key_from_config()
+            
         return None
 
     def _log_exception_error(self, exception):
@@ -801,19 +900,38 @@ class SAMLAuthenticator(Authenticator):
         return ''
 
     def _make_cert_metadata(self):
-        cert_data = '''<KeyDescriptor use="encryption">
-            <ds:KeyInfo>
-                    <ds:X509Data>
-                        <ds:X509Certificate>
-                            {{ cert }}
-                        </ds:X509Certificate>
-                    </ds:X509Data>
-            </ds:KeyInfo>
-        </KeyDescriptor>'''
+        try:
+            cert = self._get_preferred_cert_from_source()
+        except Exception as e:
+            # There was a problem getting the SAML metadata
+            self.log.warning('Got exception when attempting to read Certificate')
+            self.log.warning('Ensure that EXACTLY ONE of cert_filepath or ' +
+                             'cert_content is populated')
+            self._log_exception_error(e)
+            return None
+
+        cert_data = '''<KeyDescriptor use="signing">
+    <ds:KeyInfo>
+            <ds:X509Data>
+                <ds:X509Certificate>
+                    {{ cert }}
+                </ds:X509Certificate>
+            </ds:X509Data>
+    </ds:KeyInfo>
+</KeyDescriptor>
+<KeyDescriptor use="encryption">
+    <ds:KeyInfo>
+            <ds:X509Data>
+                <ds:X509Certificate>
+                    {{ cert }}
+                </ds:X509Certificate>
+            </ds:X509Data>
+    </ds:KeyInfo>
+</KeyDescriptor>'''
 
         cert_metadata_template = Template(cert_data)
 
-        return org_metadata_template.render(cert=self.cert)
+        return cert_metadata_template.render(cert=cert)
 
     def _make_sp_authnrequest_v2(self, meta_handler_self):
 
