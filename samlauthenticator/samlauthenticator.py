@@ -439,10 +439,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 "url": acs_endpoint_url,
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
             },
-            "singleLogoutService": {
-                "url": logout_url,
-                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-            },
             "attributeConsumingService": {
                 "serviceName": audience,
                 "serviceDescription": audience,
