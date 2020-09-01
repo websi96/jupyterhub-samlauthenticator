@@ -60,6 +60,7 @@ from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
 from onelogin.saml2.errors import OneLogin_Saml2_Error
 from onelogin.saml2.constants import OneLogin_Saml2_Constants
 from onelogin.saml2.utils import OneLogin_Saml2_Utils
+from onelogin.saml2.response import OneLogin_Saml2_Response
 import xmlsec
 
 
@@ -893,11 +894,17 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.error('Error getting SAML Metadata')
             return None
 
-        valid_saml_response, signed_xml = self._test_valid_saml_response(
-            saml_metadata_etree, saml_doc_etree)
+        #valid_saml_response, signed_xml = self._test_valid_saml_response(
+        #    saml_metadata_etree, saml_doc_etree)
+
+        #TODO: add OneLogin_Saml2_Response
+        res = OneLogin_Saml2_Response(self.settings, data)
+        valid_saml_response = res.is_valid({})
+        signed_xml = res.get_xml_document()
 
         if valid_saml_response:
             self.log.debug('Authenticated user using SAML')
+            #TODO: get username from signed_xml, maybe rename signed_xml to userdata
             username = self._get_username_from_saml_doc(
                 signed_xml, saml_doc_etree)
             username = self.normalize_username(username)
@@ -1061,8 +1068,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             "NameIDFormat": self.nameid_format
         }
 
-        settings = OneLogin_Saml2_Settings(idp_data)
-        authn = OneLogin_Saml2_Authn_Request(settings)
+        self.settings = OneLogin_Saml2_Settings(idp_data)
+        authn = OneLogin_Saml2_Authn_Request(self.settings)
         if self.use_signing:
             return OneLogin_Saml2_Utils.add_sign(authn.get_request(), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
         else:
