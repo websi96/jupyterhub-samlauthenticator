@@ -551,6 +551,10 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             '//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
         cert_value = None
 
+        find_fingerprint = xpath_with_namespaces(
+            '//ds:SignedInfo/ds:Reference/ds:DigestValue/text()')
+        fingerprint_value = None
+
         try:
             cert_value = find_cert(saml_metadata)[0]
         except Exception as e:
@@ -558,8 +562,18 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._log_exception_error(e)
             return None
 
+        try:
+            fingerprint_value = find_fingerprint(saml_metadata)[0]
+        except Exception as e:
+            self.log.warning('Could not get fingerprint value from saml metadata')
+            self._log_exception_error(e)
+            return None
+
         signed_xml = None
         try:
+            self.log.warning('TEST valitation:')
+            val = OneLogin_Saml2_Utils.validate_sign(saml_doc_etree, cert_value, fingerprint_value)
+            self.log.warning(val)
             signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
