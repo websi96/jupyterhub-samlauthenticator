@@ -50,6 +50,7 @@ import hashlib
 from onelogin.saml2.authn_request import OneLogin_Saml2_Authn_Request
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
+import xmlsec
 
 class SAMLAuthenticator(Authenticator):
     auth_version = Unicode(
@@ -83,7 +84,7 @@ SpZwwE1/+eeN''',
         allow_none=True,
         config=True,
         help='''
-        Provide a Certificate for encryption
+        Provide a Certificate for encryption and signing
         '''
     )
     cert_filepath = Unicode(
@@ -91,7 +92,7 @@ SpZwwE1/+eeN''',
         allow_none=True,
         config=True,
         help='''
-        Provide a Certificate for encryption
+        Provide a Certificate for encryption and signing
         '''
     )
     key_content = Unicode(
@@ -124,7 +125,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         allow_none=True,
         config=True,
         help='''
-        Provide a Key for encryption
+        Provide a Key for encryption and signing
         '''
     )
     key_filepath = Unicode(
@@ -132,7 +133,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         allow_none=True,
         config=True,
         help='''
-        Provide a Key for encryption
+        Provide a Key for encryption and signing
         '''
     )
     metadata_filepath = Unicode(
@@ -830,7 +831,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     @gen.coroutine
     def authenticate(self, handler, data):
         return self._authenticate(handler, data)
-
+        
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
         saml_metadata_etree = self._get_saml_metadata_etree()
 
@@ -853,7 +854,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         if self.auth_version is 'v2':
             encoded_xml_content = self._make_sp_authnrequest_v2(handler_self)
         if self.auth_version is 'v1':
-            xml_content = self._make_sp_authnrequest(handler_self)
+            xml_content = self._make_sp_authnrequest(handler_self, redirect_link_getter(saml_metadata_etree)[0])
             encoded_xml_content = b64encode(zlib.compress(xml_content.encode())[2:-4]).decode()
 
         # Here permanent MUST BE False - otherwise the /hub/logout GET will not be fired
@@ -933,6 +934,50 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return cert_metadata_template.render(cert=cert)
 
+    def __build_signature(self, saml_data, relay_state, saml_type, sign_algorithm=OneLogin_Saml2_Constants.RSA_SHA1):
+        """
+        Builds the Signature
+        :param saml_data: The SAML Data
+        :type saml_data: string
+        :param relay_state: The target URL the user should be redirected to
+        :type relay_state: string
+        :param saml_type: The target URL the user should be redirected to
+        :type saml_type: string  SAMLRequest | SAMLResponse
+        :param sign_algorithm: Signature algorithm method
+        :type sign_algorithm: string
+        """
+        assert saml_type in ['SAMLRequest', 'SAMLResponse']
+
+        # Load the key into the xmlsec context
+        key = self._get_preferred_key_from_source()
+
+        if not key:
+            raise OneLogin_Saml2_Error(
+                "Trying to sign the %s but can't load the SP private key" % saml_type,
+                OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
+            )
+
+        dsig_ctx = xmlsec.DSigCtx()
+        dsig_ctx.signKey = xmlsec.Key.loadMemory(key, xmlsec.KeyDataFormatPem, None)
+
+        msg = '%s=%s' % (saml_type, quote_plus(saml_data))
+        if relay_state is not None:
+            msg += '&RelayState=%s' % quote_plus(relay_state)
+        msg += '&SigAlg=%s' % quote_plus(sign_algorithm)
+
+        # Sign the metadata with our private key.
+        sign_algorithm_transform_map = {
+            OneLogin_Saml2_Constants.DSA_SHA1: xmlsec.TransformDsaSha1,
+            OneLogin_Saml2_Constants.RSA_SHA1: xmlsec.TransformRsaSha1,
+            OneLogin_Saml2_Constants.RSA_SHA256: xmlsec.TransformRsaSha256,
+            OneLogin_Saml2_Constants.RSA_SHA384: xmlsec.TransformRsaSha384,
+            OneLogin_Saml2_Constants.RSA_SHA512: xmlsec.TransformRsaSha512
+        }
+        sign_algorithm_transform = sign_algorithm_transform_map.get(sign_algorithm, xmlsec.TransformRsaSha1)
+
+        signature = dsig_ctx.signBinary(str(msg), sign_algorithm_transform)
+        return b64encode(signature)
+
     def _make_sp_authnrequest_v2(self, meta_handler_self):
 
         entity_id = self.entity_id if self.entity_id else \
@@ -976,7 +1021,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return authn.get_request()
 
 
-    def _make_sp_authnrequest(self, meta_handler_self):
+    def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
 
         authnrequest = '''<samlp:AuthnRequest AssertionConsumerServiceURL="{{ entityLocation }}"
     ID="{{ uuid }}" IsPassive="0" IssueInstant="{{ issue_instant }}"
@@ -987,11 +1032,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     <saml:Issuer>{{ entityId }}</saml:Issuer>
     <saml:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
 </samlp:AuthnRequest>'''
-
-        backlog = '''
-        <saml:Issuer>{{ entityId }}</saml:Issuer>
-        <saml:NameIDPolicy Format="{{ nameIdFormat }}" AllowCreate="0"/>
-        '''
 
         now = datetime.now()
         issue_instant = now + timedelta(seconds=60)
