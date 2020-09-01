@@ -844,16 +844,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return True
 
     def _authenticate(self, handler, data):
-        # TODO: decrypt data
-
-        self.log.warning('Decrypt DATA:')
-        self.log.warning(data)
-
-        data = OneLogin_Saml2_Utils.decrypt_element(data, self._get_preferred_key_from_source())
-        self.log.warning('Decrypted DATA:')
-        self.log.warning(data)
-        
-
 
         saml_doc_etree = self._get_saml_doc_etree(data)
 
