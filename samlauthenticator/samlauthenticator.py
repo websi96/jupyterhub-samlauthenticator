@@ -72,7 +72,7 @@ class SAMLAuthenticator(Authenticator):
         Change between onelogin (v2) version and self scripted version (v1).
         '''
     )
-    use_signing = Unicode(
+    use_signing = Bool(
         default_value=False,
         allow_none=True,
         config=True,
@@ -606,7 +606,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             signed_xml = decoded_saml_doc
         except Exception as e:
             self.log.warning('Failed to verify signature on SAML Response')
-            self.log.warning(str(cert_value))
+            self.log.warning(str(cert_values))
             self.log.warning(str(saml_metadata))
             self.log.warning(str(decoded_saml_doc))
             self._log_exception_error(e)
