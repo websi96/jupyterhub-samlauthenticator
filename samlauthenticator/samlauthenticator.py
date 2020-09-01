@@ -72,6 +72,14 @@ class SAMLAuthenticator(Authenticator):
         Change between onelogin (v2) version and self scripted version (v1).
         '''
     )
+    use_signing = Unicode(
+        default_value=False,
+        allow_none=True,
+        config=True,
+        help='''
+        Set if Authnrequest should be signed.
+        '''
+    )
     cert_content = Unicode(
         default_value='''MIIDZTCCAk2gAwIBAgIUAggg3MKYR2S+qJB/l4hlVqZKH7IwDQYJKoZIhvcNAQEL
 BQAwQjELMAkGA1UEBhMCWFgxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEcMBoGA1UE
@@ -549,14 +557,17 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xpath_with_namespaces = self._make_xpath_builder()
         find_cert = xpath_with_namespaces(
             '//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
-        cert_value = None
+        cert_values = None
 
         find_fingerprint = xpath_with_namespaces(
             '//ds:SignedInfo/ds:Reference/ds:DigestValue/text()')
         fingerprint_value = None
 
         try:
-            cert_values = find_cert(saml_metadata)
+            certs = find_cert(saml_metadata)
+            cert_values = []
+            for cert in certs:
+                cert_values.append(OneLogin_Saml2_Utils.format_cert(cert))
         except Exception as e:
             self.log.warning('Could not get cert value from saml metadata')
             self._log_exception_error(e)
@@ -583,8 +594,14 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.warning('TEST valitation:')
             #TODO: get algorithm from xml
             
-            val = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', debug=True)
+            validated = OneLogin_Saml2_Utils.validate_sign(decoded_saml_doc, multicerts=cert_values, fingerprint=fingerprint_value, fingerprintalg='sha256', debug=True)
             self.log.warning(val)
+
+            if not validated:
+                raise OneLogin_Saml2_Error(
+                    "Failed to validate the %s but can't validate signature" % decoded_saml_doc,
+                    OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
+                )
             #signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
             signed_xml = decoded_saml_doc
         except Exception as e:
@@ -1012,52 +1029,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return cert_metadata_template.render(cert=cert)
 
-    def __build_signature(self, saml_data, relay_state, saml_type, sign_algorithm=OneLogin_Saml2_Constants.RSA_SHA1):
-        """
-        Builds the Signature
-        :param saml_data: The SAML Data
-        :type saml_data: string
-        :param relay_state: The target URL the user should be redirected to
-        :type relay_state: string
-        :param saml_type: The target URL the user should be redirected to
-        :type saml_type: string  SAMLRequest | SAMLResponse
-        :param sign_algorithm: Signature algorithm method
-        :type sign_algorithm: string
-        """
-        assert saml_type in ['SAMLRequest', 'SAMLResponse']
-
-        # Load the key into the xmlsec context
-        key = self._get_preferred_key_from_source()
-
-        if not key:
-            raise OneLogin_Saml2_Error(
-                "Trying to sign the %s but can't load the SP private key" % saml_type,
-                OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
-            )
-
-        dsig_ctx = xmlsec.DSigCtx()
-        dsig_ctx.signKey = xmlsec.Key.loadMemory(
-            key, xmlsec.KeyDataFormatPem, None)
-
-        msg = '%s=%s' % (saml_type, parse.quote(saml_data, safe=''))
-        if relay_state is not None:
-            msg += '&RelayState=%s' % parse.quote(relay_state, safe='')
-        msg += '&SigAlg=%s' % parse.quote(sign_algorithm, safe='')
-
-        # Sign the metadata with our private key.
-        sign_algorithm_transform_map = {
-            OneLogin_Saml2_Constants.DSA_SHA1: xmlsec.TransformDsaSha1,
-            OneLogin_Saml2_Constants.RSA_SHA1: xmlsec.TransformRsaSha1,
-            OneLogin_Saml2_Constants.RSA_SHA256: xmlsec.TransformRsaSha256,
-            OneLogin_Saml2_Constants.RSA_SHA384: xmlsec.TransformRsaSha384,
-            OneLogin_Saml2_Constants.RSA_SHA512: xmlsec.TransformRsaSha512
-        }
-        sign_algorithm_transform = sign_algorithm_transform_map.get(
-            sign_algorithm, xmlsec.TransformRsaSha1)
-
-        signature = dsig_ctx.signBinary(str(msg), sign_algorithm_transform)
-        return b64encode(signature)
-
     def _make_sp_authnrequest_v2(self, meta_handler_self):
 
         entity_id = self.entity_id if self.entity_id else \
@@ -1099,7 +1070,10 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         settings = OneLogin_Saml2_Settings(idp_data)
         authn = OneLogin_Saml2_Authn_Request(settings)
-        return authn.get_request()
+        if self.use_signing:
+            return OneLogin_Saml2_Utils.add_sign(authn.get_request(), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
+        else:
+            return authn.get_request()
 
     def _make_sp_authnrequest(self, meta_handler_self, redirect_link):
 
