@@ -914,23 +914,19 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             return None
 
         cert_data = '''<KeyDescriptor use="signing">
-    <ds:KeyInfo>
-            <ds:X509Data>
-                <ds:X509Certificate>
-                    {{ cert }}
-                </ds:X509Certificate>
-            </ds:X509Data>
-    </ds:KeyInfo>
-</KeyDescriptor>
-<KeyDescriptor use="encryption">
-    <ds:KeyInfo>
-            <ds:X509Data>
-                <ds:X509Certificate>
-                    {{ cert }}
-                </ds:X509Certificate>
-            </ds:X509Data>
-    </ds:KeyInfo>
-</KeyDescriptor>'''
+        <ds:KeyInfo>
+                <ds:X509Data>
+                    <ds:X509Certificate>{{cert}}</ds:X509Certificate>
+                </ds:X509Data>
+        </ds:KeyInfo>
+    </KeyDescriptor>
+    <KeyDescriptor use="encryption">
+        <ds:KeyInfo>
+                <ds:X509Data>
+                    <ds:X509Certificate>{{cert}}</ds:X509Certificate>
+                </ds:X509Data>
+        </ds:KeyInfo>
+    </KeyDescriptor>'''
 
         cert_metadata_template = Template(cert_data)
 
