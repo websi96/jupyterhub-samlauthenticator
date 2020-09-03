@@ -495,17 +495,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return None
 
     def _log_exception_error(self, exception):
-        self.log.warning('Exception: %s', str(decoded_saml_doc))
-
-    def _get_saml_doc_etree_from_decrypted(self, decoded_saml_doc):
-        try:
-            return etree.fromstring(decoded_saml_doc)
-        except Exception as e:
-            self.log.warning(
-                'Got exception when attempting to hydrate response to etree')
-            self.log.warning('Saml Response: %s', decoded_saml_doc)
-            self._log_exception_error(e)
-            return None
+        self.log.warning('Exception: %s', str(exception))
 
     def _get_saml_doc_etree(self, data):
         saml_response = data.get(self.login_post_field, None)
@@ -752,16 +742,14 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     def _authenticate(self, handler, data):
 
         # TODO: add OneLogin_Saml2_Response
-        res = OneLogin_Saml2_Response(
+        saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
-        https = 'off'
-        if 'https://' in self.acs_endpoint_url:
-            https = 'on'
-        valid_saml_response = res.is_valid({'servername': self.acs_endpoint_url.replace(
-            'https://', '').replace('http://', ''), 'https': https})
-        signed_xml = res.get_xml_document()
 
-        saml_doc_etree = self._get_saml_doc_etree_from_decrypted(signed_xml)
+        https = 'off' if 'http://' in self.acs_endpoint_url else 'on'
+        hostname = self.acs_endpoint_url.replace('https://', '').replace('http://', '')
+        saml_response_is_valid = saml_response.is_valid({'servername': hostname, 'https': https})
+        signed_xml = saml_response.get_xml_document()
+        saml_doc_etree = etree.fromstring(signed_xml)
         if saml_doc_etree is None or len(saml_doc_etree) == 0:
             self.log.error('Error getting decoded SAML Response')
             return None
@@ -769,7 +757,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         username = self._get_username_from_saml_doc(signed_xml, saml_doc_etree)
         username = self.normalize_username(username)
 
-        if valid_saml_response:
+        # TODO: make is_valid work!!
+        if saml_response_is_valid:
             self.log.debug('Authenticated user using SAML')
 
             if self._valid_config_and_roles(signed_xml, saml_doc_etree):
@@ -783,7 +772,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.debug('No valid saml response')
             self.log.warning(username)
             return username
-
 
         self.log.error('Error validating SAML response')
         return None
