@@ -750,7 +750,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         hostname = self.acs_endpoint_url.replace('https://', '').replace('http://', '')
         saml_response_is_valid = saml_response.is_valid({'servername': hostname, 'https': https})
         signed_xml = saml_response.get_xml_document()
-        saml_doc_etree = etree.parse(StringIO(signed_xml))
+        saml_doc_etree = etree.parse(StringIO(str(signed_xml)))
         if saml_doc_etree is None or len(saml_doc_etree) == 0:
             self.log.error('Error getting decoded SAML Response')
             return None
