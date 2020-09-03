@@ -495,7 +495,17 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return None
 
     def _log_exception_error(self, exception):
-        self.log.warning('Exception: %s', str(exception))
+        self.log.warning('Exception: %s', str(decoded_saml_doc))
+
+    def _get_saml_doc_etree_from_decrypted(self, decoded_saml_doc):
+        try:
+            return etree.fromstring(decoded_saml_doc)
+        except Exception as e:
+            self.log.warning(
+                'Got exception when attempting to hydrate response to etree')
+            self.log.warning('Saml Response: %s', decoded_saml_doc)
+            self._log_exception_error(e)
+            return None
 
     def _get_saml_doc_etree(self, data):
         saml_response = data.get(self.login_post_field, None)
@@ -562,54 +572,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return metadata_etree
 
-    def _verify_saml_signature(self, saml_metadata, decoded_saml_doc):
-        xpath_with_namespaces = self._make_xpath_builder()
-        find_cert = xpath_with_namespaces(
-            '//ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()')
-        cert_values = None
-
-        try:
-            certs = find_cert(saml_metadata)
-            cert_values = []
-            for cert in certs:
-                cert_values.append(OneLogin_Saml2_Utils.format_cert(cert))
-        except Exception as e:
-            self.log.warning('Could not get cert value from saml metadata')
-            self._log_exception_error(e)
-            return None
-
-        # Load the key into the xmlsec context
-        key = self._get_preferred_key_from_source(True)
-        if not key:
-            raise OneLogin_Saml2_Error(
-                "Trying to validate the %s but can't load the SP private key" % decoded_saml_doc,
-                OneLogin_Saml2_Error.PRIVATE_KEY_NOT_FOUND
-            )
-
-        signed_xml = None
-        try:
-            # TODO: get algorithm from xml
-
-            self.log.warning('TEST valitation:')
-            validated = OneLogin_Saml2_Utils.validate_sign(
-                decoded_saml_doc, multicerts=cert_values, debug=True)
-            self.log.warning(validated)
-
-            validated = True
-
-            if not validated:
-                raise OneLogin_Saml2_Error(
-                    "Failed to validate the Response but can't validate signature", 15)
-            #signed_xml = XMLVerifier().verify(decoded_saml_doc, x509_cert=cert_value).signed_xml
-            signed_xml = OneLogin_Saml2_Utils.decrypt_element(
-                decoded_saml_doc, key, debug=True)
-        except Exception as e:
-            self.log.warning('Failed to verify signature on SAML Response')
-            self.log.warning(str(cert_values))
-            self._log_exception_error(e)
-
-        return signed_xml
-
     def _make_xpath_builder(self):
         namespaces = {
             'ds': 'http://www.w3.org/2000/09/xmldsig#',
@@ -623,75 +585,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return xpath_with_namespaces
 
-    def _verify_saml_response_against_metadata(self, saml_metadata, signed_xml):
-        xpath_with_namespaces = self._make_xpath_builder()
-
-        find_entity_id = xpath_with_namespaces('//saml:Issuer/text()')
-        find_metadata_entity_id = xpath_with_namespaces(
-            '//md:EntityDescriptor/@entityID')
-
-        saml_metadata_entity_id_list = find_metadata_entity_id(saml_metadata)
-        saml_resp_entity_id_list = find_entity_id(signed_xml)
-
-        if saml_resp_entity_id_list and saml_metadata_entity_id_list:
-            if saml_metadata_entity_id_list[0] != saml_resp_entity_id_list[0]:
-                self.log.warning(
-                    'Metadata entity id did not match the response entity id')
-                self.log.warning('Metadata entity id: %s',
-                                 saml_metadata_entity_id_list[0])
-                self.log.warning('Response entity id: %s',
-                                 saml_resp_entity_id_list[0])
-                return False
-        else:
-            self.log.warning(
-                'The entity ID needs to be set in both the metadata and the SAML Response')
-            if not saml_resp_entity_id_list:
-                self.log.warning(
-                    'The entity ID was not set in the SAML Response')
-            if not saml_metadata_entity_id_list:
-                self.log.warning(
-                    'The entity ID was not set in the SAML metadata')
-            return False
-
-        return True
-
-    def _verify_saml_response_against_configured_fields(self, signed_xml):
-        xpath_with_namespaces = self._make_xpath_builder()
-
-        if self.audience:
-            find_audience = xpath_with_namespaces('//saml:Audience/text()')
-            saml_resp_audience_list = find_audience(signed_xml)
-            if saml_resp_audience_list:
-                if saml_resp_audience_list[0] != self.audience:
-                    self.log.warning(
-                        'Configured audience did not match the response audience')
-                    self.log.warning('Configured audience: %s', self.audience)
-                    self.log.warning('Response audience: %s',
-                                     saml_resp_audience_list[0])
-                    return False
-            else:
-                self.log.warning(
-                    'SAML Audience was set in authenticator config file, but not in SAML Response')
-                return False
-
-        if self.recipient:
-            find_recipient = xpath_with_namespaces(
-                '//saml:SubjectConfirmationData/@Recipient')
-            recipient_list = find_recipient(signed_xml)
-            if recipient_list:
-                if self.recipient != recipient_list[0]:
-                    self.log.warning(
-                        'Configured recipient did not match the response recipient')
-                    self.log.warning(
-                        'Configured recipient: %s', self.recipient)
-                    self.log.warning('Response recipient: %s',
-                                     recipient_list[0])
-                    return False
-            else:
-                self.log.warning('Could not find recipient in SAML response')
-                return False
-
-        return True
 
     def _is_date_aware(self, created_datetime):
         return created_datetime.tzinfo is not None and \
@@ -751,33 +644,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return True
 
-    def _verify_saml_response_fields(self, saml_metadata, signed_xml):
-        if not self._verify_saml_response_against_metadata(saml_metadata, signed_xml):
-            self.log.warning(
-                'The SAML Assertion did not match the provided metadata')
-            return False
-
-        if not self._verify_saml_response_against_configured_fields(signed_xml):
-            self.log.warning(
-                'The SAML Assertion did not match the configured values')
-            return False
-
-        if not self._verify_physical_constraints(signed_xml):
-            self.log.warning(
-                'The SAML Assertion did not match the physical constraints')
-            return False
-
-        self.log.info('The SAML Assertion matched the configured values')
-        return True
-
-    def _test_valid_saml_response(self, saml_metadata, saml_doc):
-        signed_xml = self._verify_saml_signature(saml_metadata, saml_doc)
-
-        if signed_xml is None or len(signed_xml) == 0:
-            self.log.warning('Failed to verify signature on SAML Response')
-            return False, None
-
-        return self._verify_saml_response_fields(saml_metadata, signed_xml), signed_xml
 
     def _get_username_from_saml_etree(self, signed_xml):
         xpath_with_namespaces = self._make_xpath_builder()
@@ -885,21 +751,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
     def _authenticate(self, handler, data):
 
-        saml_doc_etree = self._get_saml_doc_etree(data)
-
-        if saml_doc_etree is None or len(saml_doc_etree) == 0:
-            self.log.error('Error getting decoded SAML Response')
-            return None
-
-        saml_metadata_etree = self._get_saml_metadata_etree()
-
-        if saml_metadata_etree is None or len(saml_metadata_etree) == 0:
-            self.log.error('Error getting SAML Metadata')
-            return None
-
-        # valid_saml_response, signed_xml = self._test_valid_saml_response(
-        #    saml_metadata_etree, saml_doc_etree)
-
         # TODO: add OneLogin_Saml2_Response
         res = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
@@ -910,12 +761,16 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             'https://', '').replace('http://', ''), 'https': https})
         signed_xml = res.get_xml_document()
 
+        saml_doc_etree = self._get_saml_doc_etree_from_decrypted(signed_xml)
+        if saml_doc_etree is None or len(saml_doc_etree) == 0:
+            self.log.error('Error getting decoded SAML Response')
+            return None
+        # TODO: get username from signed_xml, maybe rename signed_xml to userdata
+        username = self._get_username_from_saml_doc(signed_xml, saml_doc_etree)
+        username = self.normalize_username(username)
+
         if valid_saml_response:
             self.log.debug('Authenticated user using SAML')
-            # TODO: get username from signed_xml, maybe rename signed_xml to userdata
-            username = self._get_username_from_saml_doc(
-                signed_xml, saml_doc_etree)
-            username = self.normalize_username(username)
 
             if self._valid_config_and_roles(signed_xml, saml_doc_etree):
                 self.log.debug(
@@ -924,6 +779,11 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
             self.log.error('Assertion did not have appropriate roles')
             return None
+        else:
+            self.log.debug('No valid saml response')
+            self.log.warning(username)
+            return username
+
 
         self.log.error('Error validating SAML response')
         return None
