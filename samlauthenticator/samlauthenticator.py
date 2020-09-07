@@ -755,11 +755,18 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self.log.error('Error getting decoded SAML Response')
             return None
         # TODO: get username from signed_xml, maybe rename signed_xml to userdata
+        self.log.debug(saml_response.get_nameid())
         username = self._get_username_from_saml_doc(signed_xml)
         username = self.normalize_username(username)
+        self.log.debug(str(signed_xml))
 
+        # TODO: can be removed, when self signed certs work
+        if not self.use_signing:
+            self.log.debug('No valid saml response')
+            self.log.warning(username)
+            return username
         # TODO: make is_valid work!!
-        if saml_response_is_valid:
+        elif saml_response_is_valid:
             self.log.debug('Authenticated user using SAML')
 
             if self._valid_config_and_roles(signed_xml):
@@ -769,10 +776,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
             self.log.error('Assertion did not have appropriate roles')
             return None
-        else:
-            self.log.debug('No valid saml response')
-            self.log.warning(username)
-            return username
 
         self.log.error('Error validating SAML response')
         return None
@@ -907,8 +910,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 </samlp:AuthnRequest>'''
 
         now = datetime.now()
-        issue_instant = now + timedelta(seconds=60)
-        issue_instant = issue_instant.strftime("%Y-%m-%dT%H:%M:%SZ")
+        #issue_instant = now + timedelta(seconds=60)
+        issue_instant = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         entity_id = self.entity_id if self.entity_id else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
