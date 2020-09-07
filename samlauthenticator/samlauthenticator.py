@@ -937,7 +937,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
     <md:SPSSODescriptor
-            AuthnRequestsSigned={{ signed }}
+            AuthnRequestsSigned="{{ signed }}"
             protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
         <md:NameIDFormat>
             {{ nameIdFormat }}
