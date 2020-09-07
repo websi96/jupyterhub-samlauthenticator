@@ -964,8 +964,12 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                                    certMetadata=cert_metadata_elem)
 
     def _get_onelogin_settings(self, meta_handler_self):
-        entity_id = self.entity_id if self.entity_id else 'http://localhost'
-        audience = self.audience if self.audience else 'http://localhost'
+        entity_id = self.entity_id if self.entity_id else \
+            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+        
+        audience = self.audience if self.audience else \
+            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
             entity_id + '/hub/login'
 
