@@ -576,7 +576,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return xpath_with_namespaces
 
-
     def _is_date_aware(self, created_datetime):
         return created_datetime.tzinfo is not None and \
             created_datetime.tzinfo.utcoffset(created_datetime) is not None
@@ -634,7 +633,6 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             return False
 
         return True
-
 
     def _get_username_from_saml_etree(self, signed_xml):
         xpath_with_namespaces = self._make_xpath_builder()
@@ -747,10 +745,12 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
 
         https = 'off' if 'http://' in self.acs_endpoint_url else 'on'
-        hostname = self.acs_endpoint_url.replace('https://', '').replace('http://', '')
-        saml_response_is_valid = saml_response.is_valid({'servername': hostname, 'https': https})
+        hostname = self.acs_endpoint_url.replace(
+            'https://', '').replace('http://', '')
+        saml_response_is_valid = saml_response.is_valid(
+            {'servername': hostname, 'https': https})
         signed_xml = saml_response.get_xml_document()
-        
+
         if signed_xml is None or len(signed_xml) == 0:
             self.log.error('Error getting decoded SAML Response')
             return None
@@ -890,10 +890,15 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         return cert_metadata_template.render(cert=cert)
 
     def _make_sp_authnrequest_v2(self, meta_handler_self):
-        authn = OneLogin_Saml2_Authn_Request(self._get_onelogin_settings(meta_handler_self))
+        authn = OneLogin_Saml2_Authn_Request(
+            self._get_onelogin_settings(meta_handler_self))
 
         if self.use_signing:
-            return OneLogin_Saml2_Utils.add_sign(authn.get_request(False), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
+            meta_handler_self.log.warning(authn)
+            signed_request = OneLogin_Saml2_Utils.add_sign(authn.get_xml(), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
+            meta_handler_self.log.warning(signed_request)
+            encoded_request = OneLogin_Saml2_Utils.deflate_and_base64_encode(signed_request)
+            return encoded_request
         else:
             return authn.get_request()
 
@@ -972,13 +977,14 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
     def _get_onelogin_settings(self, meta_handler_self):
         entity_id = self.entity_id if self.entity_id else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
-        
+
         audience = self.audience if self.audience else \
             meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
 
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
             entity_id + '/hub/login'
 
+        # TODO: what todo with logout?
         logout_url = entity_id + '/hub/logout'
 
         settings = OneLogin_Saml2_IdPMetadataParser.parse(
