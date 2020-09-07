@@ -743,49 +743,46 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return True
 
     def _authenticate(self, handler, data):
-
-        # TODO: add OneLogin_Saml2_Response
+        # parses and validates response
         saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
+        xml = saml_response.get_xml_document()
+        if xml is None or len(xml) == 0:
+            self.log.error('Error getting decoded SAML Response')
+            return None
 
+        username = self._get_username_from_saml_doc(xml)
+        username = self.normalize_username(username)
+        
         https = 'off' if 'http://' in self.acs_endpoint_url else 'on'
         hostname = self.acs_endpoint_url.replace(
             'https://', '').replace('http://', '')
-        saml_response_is_valid = saml_response.is_valid(
-            {'servername': hostname, 'https': https})
-        signed_xml = saml_response.get_xml_document()
 
-        if signed_xml is None or len(signed_xml) == 0:
-            self.log.error('Error getting decoded SAML Response')
+
+        self.log.debug(handler._headers)
+
+        try:
+            saml_response_is_valid = saml_response.is_valid(
+                {'servername': hostname, 'https': https}, raise_exceptions=True)
+        except Exception as e:
+            self.log.error('Error validating SAML Response')
+            self.log.error(e)
             return None
-        # TODO: get username from signed_xml, maybe rename signed_xml to userdata
-        self.log.debug(saml_response.get_nameid())
-        username = self._get_username_from_saml_doc(signed_xml)
-        username = self.normalize_username(username)
-        self.log.debug(str(signed_xml))
 
-        # TODO: can be removed, when self signed certs work
-        if not self.use_signing:
-            self.log.debug('No valid saml response')
-            self.log.warning(username)
-            return username
+        saml_response_is_valid = self._valid_config_and_roles(xml)
         # TODO: make is_valid work!!
-        elif saml_response_is_valid:
+        if saml_response_is_valid:
             self.log.debug('Authenticated user using SAML')
 
-            if self._valid_config_and_roles(signed_xml):
-                self.log.debug(
-                    'Optionally create and return user: ' + username)
-                return self._check_username_and_add_user(username)
-
-            self.log.error('Assertion did not have appropriate roles')
-            return None
+            self.log.debug(
+                'Optionally create and return user: ' + username)
+            return self._check_username_and_add_user(username)
 
         self.log.error('Error validating SAML response')
         return None
 
     @gen.coroutine
-    def authenticate(self, handler, data):
+    def authenticate(self, handler: web.RequestHandler, data):
         return self._authenticate(handler, data)
 
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
@@ -899,9 +896,11 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         if self.use_signing:
             meta_handler_self.log.warning(authn)
-            signed_request = OneLogin_Saml2_Utils.add_sign(authn.get_xml(), self._get_preferred_key_from_source(), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
+            signed_request = OneLogin_Saml2_Utils.add_sign(authn.get_xml(), self._get_preferred_key_from_source(
+            ), self._get_preferred_cert_from_source(), sign_algorithm=OneLogin_Saml2_Constants.SHA256, digest_algorithm=OneLogin_Saml2_Constants.SHA256)
             meta_handler_self.log.warning(signed_request)
-            encoded_request = OneLogin_Saml2_Utils.deflate_and_base64_encode(signed_request)
+            encoded_request = OneLogin_Saml2_Utils.deflate_and_base64_encode(
+                signed_request)
             return encoded_request
         else:
             return authn.get_request()
@@ -978,12 +977,12 @@ BqyvsK6SXsj16MuGXHDgiJNN
                                    certMetadata=cert_metadata_elem,
                                    signed=signed)
 
-    def _get_onelogin_settings(self, meta_handler_self):
+    def _get_onelogin_settings(self, handler):
         entity_id = self.entity_id if self.entity_id else \
-            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+            handler.request.protocol + '://' + handler.request.host
 
         audience = self.audience if self.audience else \
-            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
+            handler.request.protocol + '://' + handler.request.host
 
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
             entity_id + '/hub/login'
