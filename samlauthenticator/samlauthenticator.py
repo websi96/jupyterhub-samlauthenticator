@@ -663,23 +663,23 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return []
 
-    def _get_username_from_saml_doc(self, signed_xml, decoded_saml_doc):
+    def _get_username_from_saml_doc(self, signed_xml):
         user_name = self._get_username_from_saml_etree(signed_xml)
         if user_name:
             return user_name
 
-        self.log.info('Did not get user name from signed SAML Response')
+        self.log.error('Did not get user name from signed SAML Response')
 
-        return self._get_username_from_saml_etree(decoded_saml_doc)
+        return None
 
-    def _get_roles_from_saml_doc(self, signed_xml, decoded_saml_doc):
+    def _get_roles_from_saml_doc(self, signed_xml):
         user_roles = self._get_roles_from_saml_etree(signed_xml)
         if user_roles:
             return user_roles
 
-        self.log.info('Did not get user roles from signed SAML Response')
+        self.log.error('Did not get user roles from signed SAML Response')
 
-        return self._get_roles_from_saml_etree(decoded_saml_doc)
+        return None
 
     def _optional_user_add(self, username):
         try:
@@ -716,17 +716,17 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
 
         return any(elem in allowed_roles for elem in user_roles)
 
-    def _valid_roles_in_assertion(self, signed_xml, saml_doc_etree):
-        user_roles = self._get_roles_from_saml_doc(signed_xml, saml_doc_etree)
+    def _valid_roles_in_assertion(self, signed_xml):
+        user_roles = self._get_roles_from_saml_doc(signed_xml)
 
         user_roles_result = self._check_role(user_roles)
         if not user_roles_result:
             self.log.error('User role not authorized')
         return user_roles_result
 
-    def _valid_config_and_roles(self, signed_xml, saml_doc_etree):
+    def _valid_config_and_roles(self, signed_xml):
         if self.allowed_roles and self.xpath_role_location:
-            return self._valid_roles_in_assertion(signed_xml, saml_doc_etree)
+            return self._valid_roles_in_assertion(signed_xml)
 
         if (not self.allowed_roles) and self.xpath_role_location:
             self.log.warning(self._const_warn_no_roles)
@@ -750,19 +750,19 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         hostname = self.acs_endpoint_url.replace('https://', '').replace('http://', '')
         saml_response_is_valid = saml_response.is_valid({'servername': hostname, 'https': https})
         signed_xml = saml_response.get_xml_document()
-        saml_doc_etree = etree.parse(StringIO(str(signed_xml)))
-        if saml_doc_etree is None or len(saml_doc_etree) == 0:
+        
+        if signed_xml is None or len(signed_xml) == 0:
             self.log.error('Error getting decoded SAML Response')
             return None
         # TODO: get username from signed_xml, maybe rename signed_xml to userdata
-        username = self._get_username_from_saml_doc(signed_xml, saml_doc_etree)
+        username = self._get_username_from_saml_doc(signed_xml)
         username = self.normalize_username(username)
 
         # TODO: make is_valid work!!
         if saml_response_is_valid:
             self.log.debug('Authenticated user using SAML')
 
-            if self._valid_config_and_roles(signed_xml, saml_doc_etree):
+            if self._valid_config_and_roles(signed_xml):
                 self.log.debug(
                     'Optionally create and return user: ' + username)
                 return self._check_username_and_add_user(username)
@@ -964,9 +964,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                                    certMetadata=cert_metadata_elem)
 
     def _get_onelogin_settings(self, meta_handler_self):
-        entity_id = self.entity_id if self.entity_id else \
-            meta_handler_self.request.protocol + '://' + meta_handler_self.request.host
-
+        entity_id = self.entity_id if self.entity_id else 'http://localhost'
+        audience = self.audience if self.audience else 'http://localhost'
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
             entity_id + '/hub/login'
 
@@ -983,14 +982,14 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
             },
             "attributeConsumingService": {
-                "serviceName": self.audience,
-                "serviceDescription": self.audience,
+                "serviceName": audience,
+                "serviceDescription": audience,
                 "requestedAttributes": [
                     {
-                        "name": self.audience,
+                        "name": audience,
                         "isRequired": False,
                         "nameFormat": self.nameid_format,
-                        "friendlyName": self.audience,
+                        "friendlyName": audience,
                         "attributeValue": []
                     }
                 ]
