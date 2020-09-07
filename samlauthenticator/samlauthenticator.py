@@ -743,7 +743,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return True
 
     def _authenticate(self, handler, data):
-        # parses and validates response
+        # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
         xml = saml_response.get_xml_document()
@@ -753,23 +753,21 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         username = self._get_username_from_saml_doc(xml)
         username = self.normalize_username(username)
-        
+
         https = 'off' if 'http://' in self.acs_endpoint_url else 'on'
         hostname = self.acs_endpoint_url.replace(
             'https://', '').replace('http://', '')
 
-
-        self.log.warning(handler._headers)
+        self.log.warning(handler.get_argument('referer'))
 
         try:
-            saml_response_is_valid = saml_response.is_valid(
-                {'servername': hostname, 'https': https}, raise_exceptions=True)
+            saml_response_is_valid = saml_response.is_valid(handler, raise_exceptions=True)
+            saml_response_is_valid = self._valid_config_and_roles(xml)
         except Exception as e:
             self.log.error('Error validating SAML Response')
             self.log.error(e)
             return None
 
-        saml_response_is_valid = self._valid_config_and_roles(xml)
         # TODO: make is_valid work!!
         if saml_response_is_valid:
             self.log.debug('Authenticated user using SAML')
@@ -861,7 +859,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
     def _make_cert_metadata(self):
         try:
-            cert = self._get_preferred_cert_from_source(False)
+            cert = self._get_preferred_cert_from_source(True)
         except Exception as e:
             # There was a problem getting the SAML metadata
             self.log.warning(
