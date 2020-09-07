@@ -759,7 +759,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
             'https://', '').replace('http://', '')
 
 
-        self.log.debug(handler._headers)
+        self.log.warning(handler._headers)
 
         try:
             saml_response_is_valid = saml_response.is_valid(
