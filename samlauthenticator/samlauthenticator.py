@@ -79,7 +79,7 @@ class SAMLAuthenticator(Authenticator):
         allow_none=True,
         config=True,
         help='''
-        Set if Authnrequest should be signed.
+        Set if Authnrequest should be signed. And response validated.
         '''
     )
     cert_content = Unicode(
@@ -937,7 +937,7 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
         xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
     <md:SPSSODescriptor
-            AuthnRequestsSigned="false"
+            AuthnRequestsSigned={{ signed }}
             protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
         <md:NameIDFormat>
             {{ nameIdFormat }}
@@ -956,6 +956,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
         acs_endpoint_url = self.acs_endpoint_url if self.acs_endpoint_url else \
             entity_id + '/hub/login'
 
+        signed = 'true' if self.use_signing else 'false'
+
         org_metadata_elem = self._make_org_metadata()
         cert_metadata_elem = self._make_cert_metadata()
 
@@ -964,7 +966,8 @@ BqyvsK6SXsj16MuGXHDgiJNN''',
                                    nameIdFormat=self.nameid_format,
                                    entityLocation=acs_endpoint_url,
                                    organizationMetadata=org_metadata_elem,
-                                   certMetadata=cert_metadata_elem)
+                                   certMetadata=cert_metadata_elem,
+                                   signed=signed)
 
     def _get_onelogin_settings(self, meta_handler_self):
         entity_id = self.entity_id if self.entity_id else \
