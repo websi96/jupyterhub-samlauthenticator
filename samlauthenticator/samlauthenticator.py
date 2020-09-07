@@ -83,7 +83,8 @@ class SAMLAuthenticator(Authenticator):
         '''
     )
     cert_content = Unicode(
-        default_value='''MIIDZTCCAk2gAwIBAgIUAggg3MKYR2S+qJB/l4hlVqZKH7IwDQYJKoZIhvcNAQEL
+        default_value='''-----BEGIN CERTIFICATE-----
+MIIDZTCCAk2gAwIBAgIUAggg3MKYR2S+qJB/l4hlVqZKH7IwDQYJKoZIhvcNAQEL
 BQAwQjELMAkGA1UEBhMCWFgxFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEcMBoGA1UE
 CgwTRGVmYXVsdCBDb21wYW55IEx0ZDAeFw0yMDA5MDExMDEwMjhaFw0yMDEwMDEx
 MDEwMjhaMEIxCzAJBgNVBAYTAlhYMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAa
@@ -101,7 +102,8 @@ Nfm7polHz35XogoWUSgWjsPBZrX+HpUbIk5eCtzqY8l/doBT6nWg4R3oqwfU+MdN
 1HzPIoaL9reUKv4mYsv5wAKbz2PoH5uFaMSSfymy8fYrGiZFZIHfSMbeWIqZq8Iv
 MtcMjq66h4PrCgFaaQ2mt6UYv5NP74UEpbbwOMfZm+2hbJau5OT2gHdFuhLITu4C
 RMQMjaxUqYgEqFokIl5L9fuHW9EEQmKXlV3AdcmQcuf/gkCuTiKYxg/Od4r2CeIZ
-SpZwwE1/+eeN''',
+SpZwwE1/+eeN
+-----END CERTIFICATE-----''',
         allow_none=True,
         config=True,
         help='''
@@ -117,7 +119,8 @@ SpZwwE1/+eeN''',
         '''
     )
     key_content = Unicode(
-        default_value='''MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCXTTD/NLl/IlxS
+        default_value='''-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCXTTD/NLl/IlxS
 Gn7C8Arv67om678FEGpVGhWWnaoOwu4wOTPDZ/EblCiM5IuiGKSU7aQji5HGeu8u
 ALuwFhqlTiQg2r7jMrUio0tK+eUnJSXFLQwuAumHYXZLKSXFiBmiGIKENz5zp+o9
 leVFJij+9QOZNQq+o+AkZwHaaO6FZ8jNWt/eBTf7w8YT4azqqJaw3SypQYIIu2cM
@@ -142,7 +145,8 @@ u1nDwy46dhweXMIM1CC2nsdz20zaPsAEU6xazm9Vw5lzcGlfZYMRdTygIQKBgQCS
 73LZkLuIolcL7TCQWH/eElHJGABKndZ+V2+6VOhyGQKBgC367tYU7FKMW0gnCFkB
 NezyF8t3pssGmn1uE0bRwe2bmITWaUt0B2EqI0Xbo02vqsfICDtBitxgNHi0J187
 aT/94klm9MOcK+3sSKqdvrXgN4f8DD631utkkahED1ArxcDDsb75P0XToKnJGeul
-BqyvsK6SXsj16MuGXHDgiJNN''',
+BqyvsK6SXsj16MuGXHDgiJNN
+-----END PRIVATE KEY-----''',
         allow_none=True,
         config=True,
         help='''
