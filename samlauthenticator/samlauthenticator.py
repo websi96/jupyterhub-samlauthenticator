@@ -820,7 +820,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return None
 
     @gen.coroutine
-    def authenticate(self, handler: web.RequestHandler, data):
+    def authenticate(self, handler: httputil.HTTPServerRequest, data):
         return self._authenticate(handler, data)
 
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
