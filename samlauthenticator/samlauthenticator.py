@@ -765,7 +765,8 @@ BqyvsK6SXsj16MuGXHDgiJNN
         try:
             # TODO: use OneLogin_Saml2_Auth to verify
             request_data = self.prepare_tornado_request(handler, data)
-            auth = OneLogin_Saml2_Auth(request_data, old_settings=onelogin_settings)
+            auth = OneLogin_Saml2_Auth(
+                request_data, old_settings=onelogin_settings)
             self.log.info('#### OneLogin Auth')
             self.log.info(auth)
             auth.process_response()
@@ -919,7 +920,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
     def _make_cert_metadata(self):
         try:
-            cert = self._get_preferred_cert_from_source(True)
+            cert = self._get_preferred_cert_from_source(format=True)
         except Exception as e:
             # There was a problem getting the SAML metadata
             self.log.warning(
@@ -1072,8 +1073,8 @@ BqyvsK6SXsj16MuGXHDgiJNN
                 ]
             },
             "NameIDFormat": self.nameid_format,
-            "x509cert": self._get_preferred_cert_from_source(True),
-            "privateKey": self._get_preferred_key_from_source(True)
+            "x509cert": self._get_preferred_cert_from_source(format=True),
+            "privateKey": self._get_preferred_key_from_source(format=True)
         }
         return OneLogin_Saml2_Settings(settings)
 
