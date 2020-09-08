@@ -55,6 +55,7 @@ import uuid
 import hashlib
 from io import StringIO
 # python3-saml
+from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.authn_request import OneLogin_Saml2_Authn_Request
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
@@ -741,8 +742,27 @@ BqyvsK6SXsj16MuGXHDgiJNN
         # This technically skips the "neither set" case, but since that's expected-ish, I think we can let
         # that slide.
         return True
+    
+
+    def prepare_tornado_request(request):
+
+        dataDict = {}
+        for key in request.arguments:
+            dataDict[key] = request.arguments[key][0].decode('utf-8')
+
+        result = {
+            'https': 'on' if request == 'https' else 'off',
+            'http_host': tornado.httputil.split_host_and_port(request.host)[0],
+            'script_name': request.path,
+            'server_port': tornado.httputil.split_host_and_port(request.host)[1],
+            'get_data': dataDict,
+            'post_data': dataDict,
+            'query_string': request.query
+        }
+        return result
 
     def _authenticate(self, handler, data):
+        auth = OneLogin_Saml2_Auth(self.prepare_tornado_request(handler))
         # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
@@ -761,7 +781,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
         self.log.warning(handler.get_argument('referer'))
 
         try:
-            saml_response_is_valid = saml_response.is_valid(handler, raise_exceptions=True)
+            saml_response_is_valid = saml_response.is_valid(self.prepare_tornado_request(handler), raise_exceptions=True)
             saml_response_is_valid = self._valid_config_and_roles(xml)
         except Exception as e:
             self.log.error('Error validating SAML Response')
