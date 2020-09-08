@@ -743,33 +743,53 @@ BqyvsK6SXsj16MuGXHDgiJNN
         # that slide.
         return True
 
-    def prepare_tornado_request(self, request, dataDict):
+    def prepare_tornado_request(self, request, data_dict):
 
-        self.log.info('#### SAMLResponse')
-        self.log.info(request.get_arguments('SAMLResponse'))
-        self.log.info(request == 'https')
-        self.log.info(httputil.split_host_and_port(request.host)[0])
-        self.log.info(httputil.split_host_and_port(request.host)[1])
-        self.log.info(dataDict)
-        
+        https = 'off' if 'http://' in self.acs_endpoint_url else 'on'
+        hostname = self.acs_endpoint_url.replace(
+            'https://', '').replace('http://', '')
+
         result = {
-            'https': 'on' if request == 'https' else 'off',
-            'http_host': httputil.split_host_and_port(request.host)[0],
-            'script_name': request.path,
-            'server_port': httputil.split_host_and_port(request.host)[1],
-            'get_data': dataDict,
-            'post_data': dataDict,
+            'https': https,
+            'http_host': hostname,
+            'server_name': hostname,
+            'get_data': data_dict,
+            'post_data': data_dict,
             'query_string': None
         }
         return result
 
     def _authenticate(self, handler, data):
         onelogin_settings = self._get_onelogin_settings(handler)
+
         try:
-            request = self.prepare_tornado_request(handler, data)
-            auth = OneLogin_Saml2_Auth(request)
+            # TODO: use OneLogin_Saml2_Auth to verify
+            request_data = self.prepare_tornado_request(handler, data)
+            auth = OneLogin_Saml2_Auth(request_data, old_settings=onelogin_settings)
             self.log.info('#### OneLogin Auth')
             self.log.info(auth)
+            auth.process_response()
+            errors = auth.get_errors()
+            not_auth_warn = not auth.is_authenticated()
+
+            session = {}
+
+            if len(errors) == 0:
+                session['samlUserdata'] = auth.get_attributes()
+                session['samlNameId'] = auth.get_nameid()
+                session['samlSessionIndex'] = auth.get_session_index()
+                self_url = OneLogin_Saml2_Utils.get_self_url(request_data)
+                if 'RelayState' in data and self_url != data['RelayState'][0].decode('utf-8'):
+                    return handler.redirect(data['RelayState'][0].decode('utf-8'))
+            elif auth.get_settings().is_debug_active():
+                error_reason = auth.get_last_error_reason()
+
+            if 'samlUserdata' in session:
+                paint_logout = True
+                if len(session['samlUserdata']) > 0:
+                    attributes = session['samlUserdata'].items()
+
+            self.log.info(session)
         except Exception as e:
             self.log.error('Error building tornado request')
             self.log.error(e)
