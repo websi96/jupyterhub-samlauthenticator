@@ -743,15 +743,15 @@ BqyvsK6SXsj16MuGXHDgiJNN
         # that slide.
         return True
 
-    def prepare_tornado_request(self, request):
+    def prepare_tornado_request(self, request, dataDict):
 
         self.log.info('#### SAMLResponse')
         self.log.info(request.get_arguments('SAMLResponse'))
-
-        dataDict = {}
-        for key in request.arguments:
-            dataDict[key] = request.arguments[key][0].decode('utf-8')
-
+        self.log.info(request == 'https')
+        self.log.info(httputil.split_host_and_port(request.host)[0])
+        self.log.info(httputil.split_host_and_port(request.host)[1])
+        self.log.info(dataDict)
+        
         result = {
             'https': 'on' if request == 'https' else 'off',
             'http_host': httputil.split_host_and_port(request.host)[0],
@@ -759,14 +759,14 @@ BqyvsK6SXsj16MuGXHDgiJNN
             'server_port': httputil.split_host_and_port(request.host)[1],
             'get_data': dataDict,
             'post_data': dataDict,
-            'query_string': request.query
+            'query_string': None
         }
         return result
 
     def _authenticate(self, handler, data):
         onelogin_settings = self._get_onelogin_settings(handler)
         try:
-            request = self.prepare_tornado_request(handler)
+            request = self.prepare_tornado_request(handler, data)
             auth = OneLogin_Saml2_Auth(request)
             self.log.info('#### OneLogin Auth')
             self.log.info(auth)
@@ -820,7 +820,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return None
 
     @gen.coroutine
-    def authenticate(self, handler: httputil.HTTPServerRequest, data):
+    def authenticate(self, handler: LoginHandler, data):
         return self._authenticate(handler, data)
 
     def _get_redirect_from_metadata_and_redirect(self, element_name, handler_self):
