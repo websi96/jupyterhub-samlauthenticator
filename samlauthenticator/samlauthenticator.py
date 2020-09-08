@@ -42,7 +42,7 @@ from jupyterhub.auth import Authenticator
 from jupyterhub.utils import maybe_future
 from jupyterhub.handlers.base import BaseHandler
 from jupyterhub.handlers.login import LoginHandler, LogoutHandler
-from tornado import gen, web
+from tornado import gen, web, httputil
 from traitlets import Unicode, Bool
 from jinja2 import Template
 
@@ -742,9 +742,8 @@ BqyvsK6SXsj16MuGXHDgiJNN
         # This technically skips the "neither set" case, but since that's expected-ish, I think we can let
         # that slide.
         return True
-    
 
-    def prepare_tornado_request(request):
+    def prepare_tornado_request(self, request):
 
         dataDict = {}
         for key in request.arguments:
@@ -752,9 +751,9 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         result = {
             'https': 'on' if request == 'https' else 'off',
-            'http_host': tornado.httputil.split_host_and_port(request.host)[0],
+            'http_host': httputil.split_host_and_port(request.host)[0],
             'script_name': request.path,
-            'server_port': tornado.httputil.split_host_and_port(request.host)[1],
+            'server_port': httputil.split_host_and_port(request.host)[1],
             'get_data': dataDict,
             'post_data': dataDict,
             'query_string': request.query
@@ -762,7 +761,11 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return result
 
     def _authenticate(self, handler, data):
-        auth = OneLogin_Saml2_Auth(self.prepare_tornado_request(handler))
+        request = self.prepare_tornado_request(handler)
+        auth = OneLogin_Saml2_Auth(request)
+        self.log.warning('#### OneLogin Auth')
+        self.log.warning(auth)
+        
         # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
@@ -778,10 +781,12 @@ BqyvsK6SXsj16MuGXHDgiJNN
         hostname = self.acs_endpoint_url.replace(
             'https://', '').replace('http://', '')
 
+        self.log.warning('#### Referer')
         self.log.warning(handler.get_argument('referer'))
 
         try:
-            saml_response_is_valid = saml_response.is_valid(self.prepare_tornado_request(handler), raise_exceptions=True)
+            saml_response_is_valid = saml_response.is_valid(
+                request, raise_exceptions=True)
             saml_response_is_valid = self._valid_config_and_roles(xml)
         except Exception as e:
             self.log.error('Error validating SAML Response')
