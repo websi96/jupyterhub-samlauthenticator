@@ -771,9 +771,11 @@ BqyvsK6SXsj16MuGXHDgiJNN
             self.log.error(e)
             pass
 
+        saml_response_data = data.get(self.login_post_field, None)
+
         # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
-            self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
+            self._get_onelogin_settings(handler), saml_response_data)
         xml = saml_response.get_xml_document()
         if xml is None or len(xml) == 0:
             self.log.error('Error getting decoded SAML Response')
@@ -787,8 +789,15 @@ BqyvsK6SXsj16MuGXHDgiJNN
             'https://', '').replace('http://', '')
 
         try:
+            request_data = {
+                'servername': hostname,
+                'https': https,
+                'post_data': {
+                    'SAMLResponse': saml_response_data
+                }
+            }
             saml_response_is_valid = saml_response.is_valid(
-                {'servername': hostname, 'https': https, 'post_data': data.get(self.login_post_field, None)}, raise_exceptions=True)
+                request_data, raise_exceptions=True)
             saml_response_is_valid = self._valid_config_and_roles(xml)
         except Exception as e:
             self.log.error('Error validating SAML Response')
