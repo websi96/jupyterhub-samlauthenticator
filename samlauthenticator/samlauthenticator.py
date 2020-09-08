@@ -745,6 +745,9 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
     def prepare_tornado_request(self, request):
 
+        self.log.info('#### SAMLResponse')
+        self.log.info(request.get_arguments('SAMLResponse'))
+
         dataDict = {}
         for key in request.arguments:
             dataDict[key] = request.arguments[key][0].decode('utf-8')
@@ -761,11 +764,12 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return result
 
     def _authenticate(self, handler, data):
+        onelogin_settings = self._get_onelogin_settings(handler)
         try:
             request = self.prepare_tornado_request(handler)
             auth = OneLogin_Saml2_Auth(request)
-            self.log.warning('#### OneLogin Auth')
-            self.log.warning(auth)
+            self.log.info('#### OneLogin Auth')
+            self.log.info(auth)
         except Exception as e:
             self.log.error('Error building tornado request')
             self.log.error(e)
@@ -775,7 +779,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
-            self._get_onelogin_settings(handler), saml_response_data)
+            onelogin_settings, saml_response_data)
         xml = saml_response.get_xml_document()
         if xml is None or len(xml) == 0:
             self.log.error('Error getting decoded SAML Response')
