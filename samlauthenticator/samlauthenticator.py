@@ -761,11 +761,16 @@ BqyvsK6SXsj16MuGXHDgiJNN
         return result
 
     def _authenticate(self, handler, data):
-        request = self.prepare_tornado_request(handler)
-        auth = OneLogin_Saml2_Auth(request)
-        self.log.warning('#### OneLogin Auth')
-        self.log.warning(auth)
-        
+        try:
+            request = self.prepare_tornado_request(handler)
+            auth = OneLogin_Saml2_Auth(request)
+            self.log.warning('#### OneLogin Auth')
+            self.log.warning(auth)
+        except Exception as e:
+            self.log.error('Error building tornado request')
+            self.log.error(e)
+            pass
+
         # parses and validates the saml response
         saml_response = OneLogin_Saml2_Response(
             self._get_onelogin_settings(handler), data.get(self.login_post_field, None))
@@ -781,12 +786,9 @@ BqyvsK6SXsj16MuGXHDgiJNN
         hostname = self.acs_endpoint_url.replace(
             'https://', '').replace('http://', '')
 
-        self.log.warning('#### Referer')
-        self.log.warning(handler.get_argument('referer'))
-
         try:
             saml_response_is_valid = saml_response.is_valid(
-                request, raise_exceptions=True)
+                {'servername': hostname, 'https': https, 'post_data': data.get(self.login_post_field, None)}, raise_exceptions=True)
             saml_response_is_valid = self._valid_config_and_roles(xml)
         except Exception as e:
             self.log.error('Error validating SAML Response')
