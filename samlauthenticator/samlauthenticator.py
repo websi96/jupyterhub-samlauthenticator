@@ -474,28 +474,28 @@ BqyvsK6SXsj16MuGXHDgiJNN
     def _get_key_from_config(self):
         return self.key_content
 
-    def _get_preferred_cert_from_source(self, format=False):
+    def _get_preferred_cert_from_source(self, remove_heads=False):
         if self.cert_filepath:
-            if format:
-                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_file())
+            if remove_heads:
+                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_file(), heads=False)
             return self._get_cert_from_file()
 
         if self.cert_content:
-            if format:
-                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_config())
+            if remove_heads:
+                return OneLogin_Saml2_Utils.format_cert(self._get_cert_from_config(), heads=False)
             return self._get_cert_from_config()
 
         return None
 
-    def _get_preferred_key_from_source(self, format=False):
+    def _get_preferred_key_from_source(self, remove_heads=False):
         if self.key_filepath:
-            if format:
-                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_file())
+            if remove_heads:
+                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_file(), heads=False)
             return self._get_key_from_file()
 
         if self.key_content:
-            if format:
-                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_config())
+            if remove_heads:
+                return OneLogin_Saml2_Utils.format_private_key(self._get_key_from_config(), heads=False)
             return self._get_key_from_config()
 
         return None
@@ -920,7 +920,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
     def _make_cert_metadata(self):
         try:
-            cert = self._get_preferred_cert_from_source(format=True)
+            cert = self._get_preferred_cert_from_source(remove_heads=True)
         except Exception as e:
             # There was a problem getting the SAML metadata
             self.log.warning(
@@ -1073,8 +1073,8 @@ BqyvsK6SXsj16MuGXHDgiJNN
                 ]
             },
             "NameIDFormat": self.nameid_format,
-            "x509cert": self._get_preferred_cert_from_source(format=True),
-            "privateKey": self._get_preferred_key_from_source(format=True)
+            "x509cert": self._get_preferred_cert_from_source(remove_heads=True),
+            "privateKey": self._get_preferred_key_from_source(remove_heads=True)
         }
         return OneLogin_Saml2_Settings(settings)
 
