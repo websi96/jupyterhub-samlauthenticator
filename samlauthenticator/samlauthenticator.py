@@ -854,7 +854,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
 
             document_check_assertion = saml_response.decrypted_document if saml_response.encrypted else saml_response.document
-            if has_signed_assertion and not self.validate_sign(document_check_assertion, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False)
+            if has_signed_assertion and not self.validate_sign(document_check_assertion, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False):
                 self.log.error('#### Error second')
 
 
