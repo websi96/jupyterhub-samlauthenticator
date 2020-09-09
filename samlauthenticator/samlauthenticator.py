@@ -815,6 +815,8 @@ BqyvsK6SXsj16MuGXHDgiJNN
         try:
             request_data = {
                 'servername': hostname,
+                'http_host': hostname,
+                'server_name': hostname,
                 'https': https,
                 'post_data': {
                     'SAMLResponse': saml_response_data
@@ -849,12 +851,12 @@ BqyvsK6SXsj16MuGXHDgiJNN
                 multicerts = idp_data['x509certMulti']['signing']
 
             # If find a Signature on the Response, validates it checking the original response
-            if has_signed_response and not self.validate_sign(saml_response.document, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.RESPONSE_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False):
+            if has_signed_response and not self.validate_sign(saml_response.document, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.RESPONSE_SIGNATURE_XPATH, multicerts=multicerts, debug=True):
                 self.log.error('#### Error first')
 
 
             document_check_assertion = saml_response.decrypted_document if saml_response.encrypted else saml_response.document
-            if has_signed_assertion and not self.validate_sign(document_check_assertion, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False):
+            if has_signed_assertion and not self.validate_sign(document_check_assertion, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH, multicerts=multicerts, debug=True):
                 self.log.error('#### Error second')
 
 
@@ -876,7 +878,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
         self.log.error('Error validating SAML response')
         return None
 
-    def validate_sign(xml, cert=None, fingerprint=None, fingerprintalg='sha1', validatecert=False, debug=False, xpath=None, multicerts=None):
+    def validate_sign(self, xml, cert=None, fingerprint=None, fingerprintalg='sha1', validatecert=False, debug=False, xpath=None, multicerts=None):
         """
         Validates a signature (Message or Assertion).
 
