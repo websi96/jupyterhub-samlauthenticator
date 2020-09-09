@@ -46,25 +46,23 @@ from tornado import gen, web, httputil
 from traitlets import Unicode, Bool
 from jinja2 import Template
 
-# Imports for me
 from lxml import etree
 import pytz
 from signxml import XMLVerifier
 import zlib
+# Imports for my own saml implementation
 import uuid
 import hashlib
-from io import StringIO
 # python3-saml
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
 from onelogin.saml2.authn_request import OneLogin_Saml2_Authn_Request
 from onelogin.saml2.settings import OneLogin_Saml2_Settings
 from onelogin.saml2.idp_metadata_parser import OneLogin_Saml2_IdPMetadataParser
-from onelogin.saml2.errors import OneLogin_Saml2_Error
+from onelogin.saml2.errors import OneLogin_Saml2_Error, OneLogin_Saml2_ValidationError
 from onelogin.saml2.constants import OneLogin_Saml2_Constants
-from onelogin.saml2.utils import OneLogin_Saml2_Utils
+from onelogin.saml2.utils import OneLogin_Saml2_Utils, OneLogin_Saml2_XML
 from onelogin.saml2.response import OneLogin_Saml2_Response
 import xmlsec
-
 
 class SAMLAuthenticator(Authenticator):
     auth_version = Unicode(
@@ -791,6 +789,7 @@ BqyvsK6SXsj16MuGXHDgiJNN
                     attributes = session['samlUserdata'].items()
 
             self.log.info(session)
+            self.log.error(error_reason)
         except Exception as e:
             self.log.error('Error building tornado request')
             self.log.error(e)
@@ -827,7 +826,44 @@ BqyvsK6SXsj16MuGXHDgiJNN
         except Exception as e:
             self.log.error('Error validating SAML Response')
             self.log.error(e)
-            return None
+            pass
+
+        try:
+            idp_data = saml_response.__settings.get_idp_data()
+            idp_entity_id = idp_data['entityId']
+            sp_data = saml_response.__settings.get_sp_data()
+            sp_entity_id = sp_data['entityId']
+            signed_elements = saml_response.process_signed_elements()
+
+            has_signed_response = '{%s}Response' % OneLogin_Saml2_Constants.NS_SAMLP in signed_elements
+            has_signed_assertion = '{%s}Assertion' % OneLogin_Saml2_Constants.NS_SAML in signed_elements
+
+            cert = idp_data.get('x509cert', None)
+            fingerprint = idp_data.get('certFingerprint', None)
+            if fingerprint:
+                fingerprint = OneLogin_Saml2_Utils.format_finger_print(fingerprint)
+            fingerprintalg = idp_data.get('certFingerprintAlgorithm', None)
+
+            multicerts = None
+            if 'x509certMulti' in idp_data and 'signing' in idp_data['x509certMulti'] and idp_data['x509certMulti']['signing']:
+                multicerts = idp_data['x509certMulti']['signing']
+
+            # If find a Signature on the Response, validates it checking the original response
+            if has_signed_response and not self.validate_sign(saml_response.document, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.RESPONSE_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False):
+                self.log.error('#### Error first')
+
+
+            document_check_assertion = saml_response.decrypted_document if saml_response.encrypted else saml_response.document
+            if has_signed_assertion and not self.validate_sign(document_check_assertion, cert, fingerprint, fingerprintalg, xpath=OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH, multicerts=multicerts, debug=True, raise_exceptions=False)
+                self.log.error('#### Error second')
+
+
+            saml_response_is_valid = self._valid_config_and_roles(xml)
+        except Exception as e:
+            self.log.error('Error trying self validate')
+            self.log.error(e)
+            pass
+
 
         # TODO: make is_valid work!!
         if saml_response_is_valid:
@@ -839,6 +875,75 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         self.log.error('Error validating SAML response')
         return None
+
+    def validate_sign(xml, cert=None, fingerprint=None, fingerprintalg='sha1', validatecert=False, debug=False, xpath=None, multicerts=None):
+        """
+        Validates a signature (Message or Assertion).
+
+        :param xml: The element we should validate
+        :type: string | Document
+
+        :param cert: The public cert
+        :type: string
+
+        :param fingerprint: The fingerprint of the public cert
+        :type: string
+
+        :param fingerprintalg: The algorithm used to build the fingerprint
+        :type: string
+
+        :param validatecert: If true, will verify the signature and if the cert is valid.
+        :type: bool
+
+        :param debug: Activate the xmlsec debug
+        :type: bool
+
+        :param xpath: The xpath of the signed element
+        :type: string
+
+        :param multicerts: Multiple public certs
+        :type: list
+
+        :param raise_exceptions: Whether to return false on failure or raise an exception
+        :type raise_exceptions: Boolean
+        """
+        if xml is None or xml == '':
+            raise Exception('Empty string supplied as input')
+
+        elem = OneLogin_Saml2_XML.to_etree(xml)
+        xmlsec.enable_debug_trace(debug)
+        xmlsec.tree.add_ids(elem, ["ID"])
+
+        if xpath:
+            signature_nodes = OneLogin_Saml2_XML.query(elem, xpath)
+        else:
+            signature_nodes = OneLogin_Saml2_XML.query(elem, OneLogin_Saml2_Utils.RESPONSE_SIGNATURE_XPATH)
+
+            if len(signature_nodes) == 0:
+                signature_nodes = OneLogin_Saml2_XML.query(elem, OneLogin_Saml2_Utils.ASSERTION_SIGNATURE_XPATH)
+
+        if len(signature_nodes) == 1:
+            signature_node = signature_nodes[0]
+
+            if not multicerts:
+                return OneLogin_Saml2_Utils.validate_node_sign(signature_node, elem, cert, fingerprint, fingerprintalg, validatecert, debug, raise_exceptions=True)
+            else:
+                # If multiple certs are provided, I may ignore cert and
+                # fingerprint provided by the method and just check the
+                # certs multicerts
+                fingerprint = fingerprintalg = None
+                for cert in multicerts:
+                    if OneLogin_Saml2_Utils.validate_node_sign(signature_node, elem, cert, fingerprint, fingerprintalg, validatecert, debug, raise_exceptions=True):
+                        return True
+                raise OneLogin_Saml2_ValidationError(
+                    'Signature validation failed. SAML Response rejected.',
+                    OneLogin_Saml2_ValidationError.INVALID_SIGNATURE
+                )
+        else:
+            raise OneLogin_Saml2_ValidationError(
+                'Expected exactly one signature node; got {}.'.format(len(signature_nodes)),
+                OneLogin_Saml2_ValidationError.WRONG_NUMBER_OF_SIGNATURES
+            )
 
     @gen.coroutine
     def authenticate(self, handler: LoginHandler, data):
@@ -1051,7 +1156,6 @@ BqyvsK6SXsj16MuGXHDgiJNN
 
         settings = OneLogin_Saml2_IdPMetadataParser.parse(
             self._get_preferred_metadata_from_source())
-        settings['strict'] = False
         settings['debug'] = True
         settings['sp'] = {
             "entityId": entity_id,
@@ -1059,19 +1163,19 @@ BqyvsK6SXsj16MuGXHDgiJNN
                 "url": acs_endpoint_url,
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
             },
-            "attributeConsumingService": {
-                "serviceName": audience,
-                "serviceDescription": audience,
-                "requestedAttributes": [
-                    {
-                        "name": audience,
-                        "isRequired": False,
-                        "nameFormat": self.nameid_format,
-                        "friendlyName": audience,
-                        "attributeValue": []
-                    }
-                ]
-            },
+        #    "attributeConsumingService": {
+        #        "serviceName": audience,
+        #        "serviceDescription": audience,
+        #        "requestedAttributes": [
+        #            {
+        #                "name": audience,
+        #                "isRequired": False,
+        #                "nameFormat": self.nameid_format,
+        #                "friendlyName": audience,
+        #                "attributeValue": []
+        #            }
+        #        ]
+        #    },
             "NameIDFormat": self.nameid_format,
             "x509cert": self._get_preferred_cert_from_source(remove_heads=True),
             "privateKey": self._get_preferred_key_from_source(remove_heads=True)
